@@ -207,10 +207,10 @@ def test_changed_bytes_fail_reproducibility(root):
     assert marker in text
     path.write_bytes(text.replace(marker, '"reply_draft": "Thanks ', 1).encode("utf-8"))
     errors = validate.validate(root)
+    # The policy replay catches the edit first: the saved reply no longer matches its trace.
     assert len(errors) == 1, errors
-    assert "results.json" in errors[0]
-    assert "reproduc" in errors[0]
-    assert "line" in errors[0]
+    assert "results.json T1" in errors[0]
+    assert "reply_draft" in errors[0]
 
 
 def test_changed_debug_report_fails_reproducibility(root):
@@ -247,3 +247,54 @@ def test_validate_does_not_modify_root(root):
     validate.validate(root)
     after = {p.name: p.read_bytes() for p in root.iterdir()}
     assert before == after
+
+
+# ---- greptile review: replay the policy on every saved result; never crash on bad types
+
+def _as_together(root: Path) -> None:
+    path = root / "debug_report.json"
+    report = json.loads(path.read_text(encoding="utf-8"))
+    report["mode"] = "together"
+    path.write_text(json.dumps(report, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+
+
+def test_together_artifact_with_flipped_escalation_fails(root):
+    _as_together(root)
+    results = read_results(root)
+    t3 = next(r for r in results if r["ticket_id"] == "T3")
+    t3["needs_human_escalation"] = False
+    write_results(root, results)
+    errors = validate.validate(root)
+    assert any("T3" in e and "needs_human_escalation" in e for e in errors), errors
+
+
+def test_together_artifact_with_unsafe_reply_fails(root):
+    _as_together(root)
+    results = read_results(root)
+    t2 = next(r for r in results if r["ticket_id"] == "T2")
+    t2["reply_draft"] += " Your withdrawal will be approved within 24 hours."
+    write_results(root, results)
+    errors = validate.validate(root)
+    assert any("T2" in e for e in errors), errors
+
+
+@pytest.mark.parametrize("field,value", [("intent", []), ("ticket_id", ["T1"]), ("safety_flags", [[]])])
+def test_bad_field_types_report_errors_instead_of_crashing(root, field, value):
+    results = read_results(root)
+    results[0][field] = value
+    write_results(root, results)
+    errors = validate.validate(root)
+    assert errors
+
+
+def test_changed_bytes_in_both_reply_and_trace_fail_reproducibility(root):
+    # Consistent edits to the reply and its trace pass the replay, but offline artifacts
+    # are still byte-compared against a rerun.
+    for name in ("results.json", "debug_report.json"):
+        path = root / name
+        text = path.read_text(encoding="utf-8")
+        marker = '"reply_draft": "Thanks'
+        assert marker in text
+        path.write_bytes(text.replace(marker, '"reply_draft": "Thanks ', 1).encode("utf-8"))
+    errors = validate.validate(root)
+    assert any("reproduc" in e and "line" in e for e in errors), errors

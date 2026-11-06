@@ -87,9 +87,12 @@ def main(argv: list[str] | None = None) -> int:
         else:
             _print_human(run)
 
-    if tickets:
-        for ticket in tickets:
-            emit(ticket)
+    if args.samples or args.file is not None:
+        if args.json:  # one valid JSON array for batch input
+            print(json.dumps([_as_dict(pipeline.run_ticket(t)) for t in tickets], indent=2, ensure_ascii=False))
+        else:
+            for ticket in tickets:
+                emit(ticket)
         return 0
     if args.message:
         emit(Ticket(id="CLI1", message=" ".join(args.message)))

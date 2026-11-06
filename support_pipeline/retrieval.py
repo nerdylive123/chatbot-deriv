@@ -56,7 +56,7 @@ def truncate_snippet(text: str, limit: int = SNIPPET_LIMIT) -> str:
 def _article_snippet(body: str, best_sentence: str) -> str:
     """Whole article body when it fits the limit (full context for drafting), else the best sentence."""
     body = body.strip()
-    return body if len(body) <= SNIPPET_LIMIT else truncate_snippet(best_sentence)
+    return body if body and len(body) <= SNIPPET_LIMIT else truncate_snippet(best_sentence)
 
 
 def select_evidence(candidates: list[Evidence]) -> list[Evidence]:
@@ -289,6 +289,13 @@ class EmbeddingRetriever:
         self._sentences: list[list[str]] = []
         self._example_vectors: list[list[float]] = []
 
+    def preload(self) -> None:
+        """Load both models once (one resident at a time) so a broken or partial
+        cache fails here, where make_retriever can fall back, not mid-run."""
+        for name in (ENCODER_MODEL, CROSS_ENCODER_MODEL):
+            self.pool.acquire(name)
+        self.pool.release()
+
     def _encode(self, texts: list[str]) -> list[list[float]]:
         if not texts:
             return []
@@ -398,7 +405,14 @@ def make_retriever(preference: str = "tfidf") -> tuple[Retriever, str]:
         reason = _embedding_unavailable_reason()
         if reason:
             return TfidfRetriever(), reason
-        return EmbeddingRetriever(), ""
+        retriever = EmbeddingRetriever()
+        try:
+            retriever.preload()
+        except Exception as exc:  # partial cache, missing weights/tokenizer, torch errors
+            return TfidfRetriever(), (
+                f"embedding models failed to load ({type(exc).__name__}); using TF-IDF retrieval"
+            )
+        return retriever, ""
     raise ValueError(f"unknown retrieval backend {preference!r}; expected 'tfidf' or 'embedding'")
 
 

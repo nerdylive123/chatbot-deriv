@@ -146,7 +146,11 @@ def _llm_like_root(tmp_path, repo_root):
     results = json.loads((tmp_path / "results.json").read_text(encoding="utf-8"))
     for item in results:  # LLM wording differs from the template; that must be allowed
         if item["intent"] != "trading_advice_request":
-            item["reply_draft"] = "A differently worded, LLM-written reply."
+            text = "A differently worded, LLM-written reply."
+            item["reply_draft"] = text
+            for trace in report["traces"][item["ticket_id"]]:  # a real run saves the draft in its trace
+                if trace["stage"] == "GENERATE_REPLY":
+                    trace["output"]["reply_draft"] = text
     (tmp_path / "debug_report.json").write_text(json.dumps(report, indent=2) + "\n", encoding="utf-8")
     (tmp_path / "results.json").write_text(json.dumps(results, indent=2) + "\n", encoding="utf-8")
     return tmp_path

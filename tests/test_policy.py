@@ -442,3 +442,27 @@ def test_llm_refusal_with_refusal_verbs_is_kept():
 def test_contrast_after_refusal_verb_is_still_flagged():
     sneaky = "I can't predict prices, but gold will go up today."
     assert has_unsafe_content(sneaky, [])
+
+
+# ---- greptile review: refusal clauses must not hide advice; grounding needs a citation
+
+@pytest.mark.parametrize("text", [
+    "I can't provide advice; you should buy XYZ.",
+    "I can't provide advice: buy XYZ today.",
+    "I can't give advice, you should buy XYZ.",
+    "We cannot recommend assets, however gold will go up tomorrow.",
+])
+def test_advice_after_refusal_clause_is_flagged(text):
+    assert has_unsafe_content(text, [])
+    out = run(ticket=advice_ticket(), classification=clf(Intent.trading_advice_request, certainty=1.0),
+              evidence=[ev("A5", 0.9)], draft=draft(text=text, cited=["A5"]))
+    assert "ungrounded_claim" in out.safety_flags
+    assert out.needs_human_escalation is True
+    assert out.grounded is False
+
+
+def test_uncited_draft_claiming_sufficient_evidence_is_not_grounded():
+    out = run(draft=draft(text="Password resets require a signed paper form.", cited=[], sufficient=True))
+    assert out.grounded is False
+    assert "insufficient_grounding" in out.safety_flags
+    assert out.needs_human_escalation is True

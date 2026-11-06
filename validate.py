@@ -28,12 +28,12 @@ from typing import Any
 from pydantic import ValidationError
 
 import main as cli
-from support_pipeline.data import DataError, load_articles, load_tickets
-from support_pipeline.models import REQUIRED_RESULT_KEYS, SAFETY_FLAGS, Intent, TicketResult
+from support_pipeline.data import DataError, load_articles, load_examples, load_tickets
+from support_pipeline.models import REQUIRED_RESULT_KEYS, SAFETY_FLAGS, Classification, Draft, Intent, TicketResult
 from support_pipeline.pipeline import MODES
-from support_pipeline.policy import has_refusal, has_unsafe_content
-from support_pipeline.retrieval import _embedding_unavailable_reason
-from support_pipeline.serialize import DEBUG_FILE, RESULTS_FILE
+from support_pipeline.policy import evaluate, has_refusal, has_unsafe_content
+from support_pipeline.retrieval import _embedding_unavailable_reason, make_retriever
+from support_pipeline.serialize import DEBUG_FILE, RESULTS_FILE, round_floats
 
 REPO_ROOT = Path(__file__).resolve().parent
 REQUIRED_FILES = ("tickets.json", "kb_articles.json", RESULTS_FILE, DEBUG_FILE, "README.md")
@@ -72,7 +72,7 @@ def _check_result(index: int, item: Any, known_articles: set[str], check: _Check
     if not isinstance(item, dict):
         check.fail(f"{label}: must be a JSON object")
         return
-    label = f"results.json entry {index} ({item.get('ticket_id', '?')})"
+    label = f"results.json entry {index} ({item.get('ticket_id', '?')!s})"
     keys = set(item)
     missing = [k for k in REQUIRED_RESULT_KEYS if k not in keys]
     extra = sorted(keys - set(REQUIRED_RESULT_KEYS))
@@ -81,8 +81,11 @@ def _check_result(index: int, item: Any, known_articles: set[str], check: _Check
     if extra:
         check.fail(f"{label}: extra keys {extra}")
 
+    if "ticket_id" in item and not isinstance(item["ticket_id"], str):
+        check.fail(f"{label}: ticket_id must be a string, got {item['ticket_id']!r}")
+
     intent = item.get("intent")
-    if "intent" in item and intent not in INTENTS:
+    if "intent" in item and (not isinstance(intent, str) or intent not in INTENTS):
         check.fail(f"{label}: intent {intent!r} is not one of {sorted(INTENTS)}")
 
     articles = item.get("retrieved_articles")
@@ -223,6 +226,76 @@ def _check_reproducibility(root: Path, report: Any, check: _Check) -> None:
                  "offline path reproduces byte-for-byte (LLM wording is not byte-reproducible by design)")
 
 
+REPLAYED_FIELDS = ("reply_draft", "grounded", "confidence", "needs_human_escalation", "safety_flags")
+
+
+def _stage(traces: list[Any], name: str) -> dict[str, Any]:
+    for trace in traces:
+        if isinstance(trace, dict) and trace.get("stage") == name:
+            return trace
+    raise KeyError(name)
+
+
+def _check_policy_replay(root: Path, results: list[Any], report: Any, check: _Check) -> None:
+    """Re-run the deterministic policy on every saved result, in any mode.
+
+    Inputs: the saved classification and the generator's draft (from the debug traces)
+    plus evidence from a fresh local retrieval. The saved decision fields must equal
+    the replayed ones, so a hand-edited escalation flag or an unsafe sentence added to
+    any reply fails even though LLM wording itself is not reproducible.
+    """
+    if not isinstance(report, dict) or not isinstance(report.get("traces"), dict):
+        check.fail("debug_report.json: expected a traces object to replay the policy")
+        return
+    backends = report.get("backends") if isinstance(report.get("backends"), dict) else {}
+    retriever, note = make_retriever(backends.get("retrieval", "tfidf"))
+    if note:
+        retriever, _ = make_retriever("tfidf")
+    retriever.index(load_articles(root / "kb_articles.json"), load_examples(root / "examples.json"))
+    tickets = {t.id: t for t in load_tickets(root / "tickets.json")}
+    before = len(check.errors)
+    for item in results:
+        tid = item["ticket_id"]
+        label = f"results.json {tid}"
+        try:
+            traces = report["traces"][tid]
+            cls_out = _stage(traces, "CLASSIFY_INTENT")["output"]
+            gen = _stage(traces, "GENERATE_REPLY")
+            val_in = _stage(traces, "VALIDATE_OUTPUT")["input"]
+            ticket_backends = next(
+                (t.get("backends", {}) for t in report.get("tickets", []) if isinstance(t, dict) and t.get("ticket_id") == tid),
+                {},
+            )
+            classification = Classification(
+                intent=cls_out["intent"], certainty=cls_out["certainty"], goal=cls_out.get("goal", ""),
+                constraints=gen["input"].get("constraints", []), evidence=[],
+                conflicting_signals=cls_out.get("conflicting_signals", False),
+                backend=ticket_backends.get("classifier", "similarity_fallback"),
+            )
+            draft = Draft(
+                text=gen["output"]["reply_draft"], cited_article_ids=val_in["cited_article_ids"],
+                sufficient_evidence=val_in["sufficient_evidence"],
+                backend=ticket_backends.get("generator", "template_fallback"),
+            )
+        except (KeyError, TypeError, ValueError) as exc:
+            check.fail(f"{label}: debug_report.json traces are incomplete for a policy replay ({type(exc).__name__}: {exc})")
+            continue
+        if item["intent"] != classification.intent.value:
+            check.fail(f"{label}: intent {item['intent']!r} differs from the saved classification "
+                       f"{classification.intent.value!r}")
+        outcome = evaluate(tickets[tid], classification, retriever.retrieve(tickets[tid]), draft)
+        expected = round_floats(outcome.model_dump(mode="json"))
+        for field in REPLAYED_FIELDS:
+            if item[field] != expected[field]:
+                check.fail(f"{label}: {field} is {item[field]!r} but the deterministic policy gives "
+                           f"{expected[field]!r}")
+        if has_unsafe_content(item["reply_draft"], []) and "ungrounded_claim" not in item["safety_flags"]:
+            check.fail(f"{label}: reply_draft contains an unsafe or unsupported claim without ungrounded_claim")
+    if len(check.errors) == before:
+        check.ok(f"policy replay: every saved reply, grounding, confidence, escalation and flag set "
+                 f"matches the deterministic policy ({len(results)} tickets)")
+
+
 def _run_checks(root: Path) -> _Check:
     check = _Check()
     root = Path(root)
@@ -273,7 +346,7 @@ def _run_checks(root: Path) -> _Check:
 
         before = len(check.errors)
         ticket_ids = [t.id for t in tickets]
-        result_ids = [r.get("ticket_id") for r in results if isinstance(r, dict)]
+        result_ids = [r.get("ticket_id") for r in results if isinstance(r, dict) and isinstance(r.get("ticket_id"), str)]
         counts = Counter(result_ids)
         for ticket_id in ticket_ids:
             if counts[ticket_id] == 0:
@@ -287,9 +360,11 @@ def _run_checks(root: Path) -> _Check:
         if len(check.errors) == before:
             check.ok(f"exactly one result per ticket ({len(ticket_ids)})")
 
-        by_id = {r["ticket_id"]: r for r in results if isinstance(r, dict) and "ticket_id" in r}
+        by_id = {r["ticket_id"]: r for r in results if isinstance(r, dict) and isinstance(r.get("ticket_id"), str)}
         _check_acceptance(by_id, check)
 
+    if not check.errors:
+        _check_policy_replay(root, results, parsed.get(DEBUG_FILE), check)
     if not check.errors:
         _check_reproducibility(root, parsed.get(DEBUG_FILE), check)
     return check

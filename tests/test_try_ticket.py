@@ -60,3 +60,21 @@ def test_does_not_touch_committed_artifacts():
     before = {p: (REPO_ROOT / p).read_bytes() for p in ("results.json", "debug_report.json")}
     assert _run("hello").returncode == 0
     assert before == {p: (REPO_ROOT / p).read_bytes() for p in before}
+
+
+def test_json_batch_output_is_one_json_array():
+    proc = _run("--json", "--samples")
+    assert proc.returncode == 0, proc.stderr
+    data = json.loads(proc.stdout)
+    assert isinstance(data, list) and len(data) == 5
+
+
+def test_empty_ticket_file_exits_without_prompting(tmp_path):
+    empty = tmp_path / "empty.json"
+    empty.write_text("[]", encoding="utf-8")
+    proc = subprocess.run(
+        [sys.executable, str(SCRIPT), "--file", str(empty)],
+        cwd=REPO_ROOT, input="", capture_output=True, text=True, encoding="utf-8", timeout=60,
+    )
+    assert proc.returncode == 0, proc.stderr
+    assert "Type a ticket message" not in proc.stdout

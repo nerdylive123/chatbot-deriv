@@ -432,8 +432,11 @@ def test_make_retriever_default_is_tfidf():
     assert isinstance(retriever, TfidfRetriever) and reason == ""
 
 
-def test_make_retriever_embedding_falls_back_here():
-    # torch / sentence-transformers are not installed in the test environment.
+def test_make_retriever_embedding_falls_back_here(monkeypatch):
+    monkeypatch.setattr(
+        "support_pipeline.retrieval._embedding_unavailable_reason",
+        lambda: "models are not cached; using TF-IDF retrieval",
+    )
     retriever, reason = make_retriever("embedding")
     assert isinstance(retriever, TfidfRetriever)
     assert reason.strip()
@@ -453,3 +456,24 @@ def test_import_does_not_load_heavy_libraries():
         [sys.executable, "-c", code], cwd=REPO_ROOT, capture_output=True, text=True
     )
     assert completed.returncode == 0, completed.stderr
+
+
+# ---- greptile review: blank bodies, partial model caches
+
+def test_blank_body_keeps_title_fallback_snippet():
+    retriever = TfidfRetriever()
+    retriever.index([Article(article_id="B", title="Password reset help", body="   ")], [])
+    [evidence] = retriever.retrieve(_ticket("password reset"))
+    assert evidence.snippet.strip()
+
+
+def test_embedding_load_failure_falls_back_to_tfidf(monkeypatch):
+    monkeypatch.setattr("support_pipeline.retrieval._embedding_unavailable_reason", lambda: "")
+
+    def broken_load(self):
+        raise OSError("weights missing from partial cache")
+
+    monkeypatch.setattr(EmbeddingRetriever, "preload", broken_load)
+    retriever, reason = make_retriever("embedding")
+    assert isinstance(retriever, TfidfRetriever)
+    assert "OSError" in reason and "TF-IDF" in reason

@@ -109,6 +109,6 @@ Model IDs and structured-output support come from Together's documentation. The 
 - https://www.sbert.net/docs/sentence_transformer/pretrained_models.html
 - https://www.sbert.net/docs/pretrained-models/ce-msmarco.html
 
-## Optional: execution inspector
+## Optional: execution inspector (not built)
 
-Not required by the challenge. A FastAPI page (`pip install -r requirements-web.txt`, then `python -m uvicorn support_pipeline.web:app`) shows a ticket selector, the ordered stage list, and a stage inspector with each stage's compact input/output. A boundary label says generation receives only the selected evidence. It uses native controls, a vertical layout on narrow screens, a live region for run status, and text for every state as well as color. Credentials and provider logs never appear.
+Not required by the challenge, and not part of this submission. If it's added later, a small page would show a ticket selector, the ordered stage list, and a stage inspector with each stage's compact input/output. It would label the boundary where generation receives only the selected evidence, never show credentials or provider logs, and use native controls and text for every state. For now, `scripts/try_ticket.py` prints the same stage trace in the terminal.

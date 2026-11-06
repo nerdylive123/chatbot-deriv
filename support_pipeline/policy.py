@@ -90,12 +90,17 @@ _ACCOUNT_SPECIFICS = [
 _REFUSAL_APOLOGY = re.compile(r"\b(sorry|unable|can(no|')t|cannot|won't|not able)\b", _I)
 _REFUSAL_TOPIC = re.compile(r"(advice|recommend|predict|guarantee)", _I)
 
-# A sentence counts as a refusal sentence when it contains a refusal marker and
-# no contrast ("but", "however", ...) after that marker.
+# Refusal clauses (a refusal marker such as "can't predict") are exempt from the
+# unsafe-phrase scan; sentences are split into clauses first so nothing after a
+# semicolon, colon, contrast word, or comma splice inherits that exemption.
 _REFUSAL_MARKER = re.compile(
     r"\b(can(no|')t|can not|unable to|won't|not able to)\s+(provide|give|offer|share|make|predict|forecast|recommend|suggest|advise|guarantee|tell)\b", _I
 )
-_CONTRAST = re.compile(r"\b(but|however|though|although|still)\b", _I)
+_CLAUSE_SPLIT = re.compile(
+    r"[;:]|\b(?:but|however|though|although|still|yet|instead)\b"
+    r"|,\s*(?=(?:you|we|i|just|so|then|go|try)\b)",
+    _I,
+)
 _SENTENCE_SPLIT = re.compile(r"(?<=[.!?])\s+")
 
 # --- account_specific_request heuristic (ticket + classifier text) ---------
@@ -140,14 +145,18 @@ def _normalize(text: str) -> str:
     return text.replace("’", "'").replace("‘", "'")
 
 
-def _is_refusal_sentence(sentence: str) -> bool:
-    match = _REFUSAL_MARKER.search(sentence)
-    return bool(match) and not _CONTRAST.search(sentence[match.end():])
+def _clauses(sentence: str) -> list[str]:
+    """Split a sentence at ; : contrast words and comma splices, so a refusal clause
+    can't shield advice that follows it ("I can't give advice; you should buy XYZ")."""
+    return [c for c in _CLAUSE_SPLIT.split(sentence) if c and c.strip()]
 
 
 def _strip_refusal_sentences(text: str) -> str:
-    sentences = _SENTENCE_SPLIT.split(_normalize(text))
-    return " ".join(s for s in sentences if not _is_refusal_sentence(s))
+    """Drop only the refusal clauses themselves; every other clause is still checked."""
+    kept: list[str] = []
+    for sentence in _SENTENCE_SPLIT.split(_normalize(text)):
+        kept.extend(c for c in _clauses(sentence) if not _REFUSAL_MARKER.search(c))
+    return " ".join(kept)
 
 
 def has_unsafe_content(text: str, evidence: list[Evidence]) -> bool:
@@ -187,7 +196,10 @@ def evaluate(
     evidence_ids = {e.article_id for e in evidence}
 
     insufficient = (
-        not evidence or best_relevance < RELEVANCE_THRESHOLD or not draft.sufficient_evidence
+        not evidence
+        or best_relevance < RELEVANCE_THRESHOLD
+        or not draft.sufficient_evidence
+        or not draft.cited_article_ids  # an uncited reply can't be traced back to the KB
     )
     if insufficient:
         flags.add("insufficient_grounding")
@@ -223,6 +235,7 @@ def evaluate(
 
     grounded = (
         bool(evidence)
+        and bool(draft.cited_article_ids)
         and all(cid in evidence_ids for cid in draft.cited_article_ids)
         and draft.sufficient_evidence
         and best_relevance >= RELEVANCE_THRESHOLD

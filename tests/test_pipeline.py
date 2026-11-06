@@ -313,7 +313,7 @@ def test_build_pipeline_explicit_offline_has_no_notes():
 
 
 def test_build_pipeline_embedding_falls_back_with_note():
-    pipe, backends, notes = build_pipeline(retrieval="embedding")
+    pipe, backends, notes = build_pipeline("offline", retrieval="embedding")
     if backends.retrieval == "tfidf":  # sentence-transformers absent or models not cached
         assert notes and "TF-IDF" in notes[0]
     else:
