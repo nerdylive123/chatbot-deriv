@@ -37,7 +37,7 @@ SAFE_REFUSAL = (
 REASONS: dict[str, str] = {
     "insufficient_grounding": "No help article matched the request closely enough to ground a reply.",
     "policy_sensitive": "Withdrawal and account-lock cases are policy-sensitive and need a human to check account status.",
-    "low_confidence": "Classifier confidence is low.",
+    "low_confidence": "Overall confidence is below the 0.45 review threshold.",
     "account_specific_request": "The customer asks about details of their own account or transaction, which the help articles cannot answer.",
     "conflicting_signals": "The ticket shows signals for more than one intent.",
     "ungrounded_claim": "The draft contained a claim or citation not supported by the selected help articles.",

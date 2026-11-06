@@ -1,0 +1,70 @@
+[
+  {
+    "ticket_id": "T1",
+    "intent": "deposit_issue",
+    "retrieved_articles": [
+      "A1"
+    ],
+    "reply_draft": "Thanks for reaching out about your deposit. Here is some general guidance that may help. Based on our help article \"Card deposit processing times\": Card deposits are usually instant, but may be delayed by issuer checks, network issues, or pending review. If this doesn't resolve it, a support agent can review your case.",
+    "grounded": true,
+    "confidence": 0.544,
+    "needs_human_escalation": false,
+    "safety_flags": []
+  },
+  {
+    "ticket_id": "T2",
+    "intent": "password_reset",
+    "retrieved_articles": [
+      "A2"
+    ],
+    "reply_draft": "Thanks for contacting us about resetting your password. Here are some general steps to try. Based on our help article \"Password reset troubleshooting\": If the client does not receive a reset email, confirm the registered email address, check spam folders, wait a few minutes, and retry. If this doesn't resolve it, a support agent can review your case.",
+    "grounded": true,
+    "confidence": 0.802,
+    "needs_human_escalation": false,
+    "safety_flags": []
+  },
+  {
+    "ticket_id": "T3",
+    "intent": "withdrawal_issue",
+    "retrieved_articles": [
+      "A3"
+    ],
+    "reply_draft": "Thanks for reaching out about your withdrawal. Here is some general information. Based on our help article \"Withdrawal review and declines\": Withdrawals may be declined due to incomplete verification, mismatched payment method details, compliance review, or account restrictions. A support agent can review your account status if you need more help.",
+    "grounded": true,
+    "confidence": 0.801,
+    "needs_human_escalation": true,
+    "safety_flags": [
+      "policy_sensitive"
+    ]
+  },
+  {
+    "ticket_id": "T4",
+    "intent": "trading_advice_request",
+    "retrieved_articles": [
+      "A5"
+    ],
+    "reply_draft": "I'm sorry, but we can't provide market predictions, trading recommendations, or profit guarantees. We're happy to help with questions about your account or our services. Based on our help article \"No investment or trading advice\": Support agents must not provide market predictions, profit guarantees, or asset recommendations. If you have another question, a support agent can review your case.",
+    "grounded": false,
+    "confidence": 0.316,
+    "needs_human_escalation": true,
+    "safety_flags": [
+      "advice_request",
+      "insufficient_grounding",
+      "low_confidence"
+    ]
+  },
+  {
+    "ticket_id": "T5",
+    "intent": "account_lock",
+    "retrieved_articles": [
+      "A4"
+    ],
+    "reply_draft": "Thanks for letting us know you're having trouble accessing your account. Here is some general guidance. Based on our help article \"Account lock after failed sign-in attempts\": For security reasons, repeated failed sign-in attempts can temporarily lock the account. If this doesn't resolve it, a support agent can review your case through a secure channel.",
+    "grounded": true,
+    "confidence": 0.881,
+    "needs_human_escalation": true,
+    "safety_flags": [
+      "policy_sensitive"
+    ]
+  }
+]

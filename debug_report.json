@@ -1,0 +1,834 @@
+{
+  "mode": "offline",
+  "backends": {
+    "retrieval": "tfidf",
+    "classifier": "similarity_fallback",
+    "generator": "template_fallback"
+  },
+  "tickets": [
+    {
+      "ticket_id": "T1",
+      "predicted_intent": "deposit_issue",
+      "retrieved_article_titles": [
+        "Card deposit processing times"
+      ],
+      "escalated": false,
+      "escalation_reasons": [],
+      "confidence_factors": {
+        "classifier_certainty": 0.581,
+        "best_relevance": 0.507,
+        "penalty_insufficient_evidence": 0.0,
+        "penalty_conflicting_signals": 0.0,
+        "penalty_ungrounded_claim": 0.0,
+        "confidence": 0.544
+      },
+      "backends": {
+        "retrieval": "tfidf",
+        "classifier": "similarity_fallback",
+        "generator": "template_fallback"
+      }
+    },
+    {
+      "ticket_id": "T2",
+      "predicted_intent": "password_reset",
+      "retrieved_article_titles": [
+        "Password reset troubleshooting"
+      ],
+      "escalated": false,
+      "escalation_reasons": [],
+      "confidence_factors": {
+        "classifier_certainty": 1.0,
+        "best_relevance": 0.605,
+        "penalty_insufficient_evidence": 0.0,
+        "penalty_conflicting_signals": 0.0,
+        "penalty_ungrounded_claim": 0.0,
+        "confidence": 0.802
+      },
+      "backends": {
+        "retrieval": "tfidf",
+        "classifier": "similarity_fallback",
+        "generator": "template_fallback"
+      }
+    },
+    {
+      "ticket_id": "T3",
+      "predicted_intent": "withdrawal_issue",
+      "retrieved_article_titles": [
+        "Withdrawal review and declines"
+      ],
+      "escalated": true,
+      "escalation_reasons": [
+        "Withdrawal and account-lock cases are policy-sensitive and need a human to check account status."
+      ],
+      "confidence_factors": {
+        "classifier_certainty": 1.0,
+        "best_relevance": 0.602,
+        "penalty_insufficient_evidence": 0.0,
+        "penalty_conflicting_signals": 0.0,
+        "penalty_ungrounded_claim": 0.0,
+        "confidence": 0.801
+      },
+      "backends": {
+        "retrieval": "tfidf",
+        "classifier": "similarity_fallback",
+        "generator": "template_fallback"
+      }
+    },
+    {
+      "ticket_id": "T4",
+      "predicted_intent": "trading_advice_request",
+      "retrieved_article_titles": [
+        "No investment or trading advice"
+      ],
+      "escalated": true,
+      "escalation_reasons": [
+        "No help article matched the request closely enough to ground a reply.",
+        "Overall confidence is below the 0.45 review threshold."
+      ],
+      "confidence_factors": {
+        "classifier_certainty": 1.0,
+        "best_relevance": 0.331,
+        "penalty_insufficient_evidence": 0.35,
+        "penalty_conflicting_signals": 0.0,
+        "penalty_ungrounded_claim": 0.0,
+        "confidence": 0.316
+      },
+      "backends": {
+        "retrieval": "tfidf",
+        "classifier": "similarity_fallback",
+        "generator": "template_fallback"
+      }
+    },
+    {
+      "ticket_id": "T5",
+      "predicted_intent": "account_lock",
+      "retrieved_article_titles": [
+        "Account lock after failed sign-in attempts"
+      ],
+      "escalated": true,
+      "escalation_reasons": [
+        "Withdrawal and account-lock cases are policy-sensitive and need a human to check account status."
+      ],
+      "confidence_factors": {
+        "classifier_certainty": 1.0,
+        "best_relevance": 0.763,
+        "penalty_insufficient_evidence": 0.0,
+        "penalty_conflicting_signals": 0.0,
+        "penalty_ungrounded_claim": 0.0,
+        "confidence": 0.881
+      },
+      "backends": {
+        "retrieval": "tfidf",
+        "classifier": "similarity_fallback",
+        "generator": "template_fallback"
+      }
+    }
+  ],
+  "traces": {
+    "T1": [
+      {
+        "stage": "LOAD_DATA",
+        "summary": "Loaded tickets, KB articles and labeled examples.",
+        "input": {},
+        "output": {
+          "tickets": 5,
+          "articles": 5,
+          "examples": 22
+        },
+        "backend": "json",
+        "device": "cpu",
+        "status": "completed"
+      },
+      {
+        "stage": "INDEX_KB",
+        "summary": "Indexed KB articles and labeled examples.",
+        "input": {},
+        "output": {
+          "articles": 5,
+          "examples": 22
+        },
+        "backend": "tfidf",
+        "device": "cpu",
+        "status": "completed"
+      },
+      {
+        "stage": "CLASSIFY_INTENT",
+        "summary": "Classified intent as deposit_issue.",
+        "input": {
+          "message": "I deposited by bank card two hours ago but my balance still shows zero. What should I check?",
+          "similar_examples": [
+            {
+              "intent": "deposit_issue",
+              "score": 0.475,
+              "message": "Deposit made via e-wallet an hour ago and balance has not updated"
+            },
+            {
+              "intent": "password_reset",
+              "score": 0.181,
+              "message": "Reset email is not coming, I checked spam"
+            },
+            {
+              "intent": "trading_advice_request",
+              "score": 0.162,
+              "message": "Which stock should I buy to make money this week?"
+            }
+          ]
+        },
+        "output": {
+          "intent": "deposit_issue",
+          "certainty": 0.581,
+          "conflicting_signals": false,
+          "goal": "Resolve a delayed or missing deposit"
+        },
+        "backend": "similarity_fallback",
+        "device": "cpu",
+        "status": "completed"
+      },
+      {
+        "stage": "RETRIEVE_CONTEXT",
+        "summary": "Selected 1 help article(s).",
+        "input": {
+          "query": "I deposited by bank card two hours ago but my balance still shows zero. What should I check?"
+        },
+        "output": {
+          "evidence": [
+            {
+              "article_id": "A1",
+              "title": "Card deposit processing times",
+              "relevance": 0.507
+            }
+          ]
+        },
+        "backend": "tfidf",
+        "device": "cpu",
+        "status": "completed"
+      },
+      {
+        "stage": "GENERATE_REPLY",
+        "summary": "Drafted a reply citing 1 article(s).",
+        "input": {
+          "message": "I deposited by bank card two hours ago but my balance still shows zero. What should I check?",
+          "intent": "deposit_issue",
+          "goal": "Resolve a delayed or missing deposit",
+          "constraints": [],
+          "evidence": [
+            {
+              "article_id": "A1",
+              "title": "Card deposit processing times",
+              "snippet": "Card deposits are usually instant, but may be delayed by issuer checks, network issues, or pending review.",
+              "relevance": 0.507
+            }
+          ]
+        },
+        "output": {
+          "reply_draft": "Thanks for reaching out about your deposit. Here is some general guidance that may help. Based on our help article \"Card deposit processing times\": Card deposits are usually instant, but may be delayed by issuer checks, network issues, or pending review. If this doesn't resolve it, a support agent can review your case.",
+          "cited_article_ids": [
+            "A1"
+          ],
+          "sufficient_evidence": true
+        },
+        "backend": "template_fallback",
+        "device": "cpu",
+        "status": "completed"
+      },
+      {
+        "stage": "VALIDATE_OUTPUT",
+        "summary": "Applied deterministic policy and validated the result schema.",
+        "input": {
+          "cited_article_ids": [
+            "A1"
+          ],
+          "sufficient_evidence": true
+        },
+        "output": {
+          "grounded": true,
+          "confidence": 0.544,
+          "needs_human_escalation": false,
+          "safety_flags": [],
+          "escalation_reasons": [],
+          "reply_replaced": false
+        },
+        "backend": "policy",
+        "device": "cpu",
+        "status": "completed"
+      },
+      {
+        "stage": "WRITE_RESULTS",
+        "summary": "Result queued for the run's JSON artifacts.",
+        "input": {},
+        "output": {
+          "results_file": "results.json",
+          "debug_file": "debug_report.json"
+        },
+        "backend": "json",
+        "device": "cpu",
+        "status": "completed"
+      }
+    ],
+    "T2": [
+      {
+        "stage": "LOAD_DATA",
+        "summary": "Loaded tickets, KB articles and labeled examples.",
+        "input": {},
+        "output": {
+          "tickets": 5,
+          "articles": 5,
+          "examples": 22
+        },
+        "backend": "json",
+        "device": "cpu",
+        "status": "completed"
+      },
+      {
+        "stage": "INDEX_KB",
+        "summary": "Indexed KB articles and labeled examples.",
+        "input": {},
+        "output": {
+          "articles": 5,
+          "examples": 22
+        },
+        "backend": "tfidf",
+        "device": "cpu",
+        "status": "completed"
+      },
+      {
+        "stage": "CLASSIFY_INTENT",
+        "summary": "Classified intent as password_reset.",
+        "input": {
+          "message": "I forgot my password and I am not receiving the reset email.",
+          "similar_examples": [
+            {
+              "intent": "password_reset",
+              "score": 0.504,
+              "message": "Reset email is not coming, I checked spam"
+            },
+            {
+              "intent": "password_reset",
+              "score": 0.467,
+              "message": "I can't remember my password, how do I reset it?"
+            },
+            {
+              "intent": "password_reset",
+              "score": 0.368,
+              "message": "The password reset link never arrived in my inbox"
+            }
+          ]
+        },
+        "output": {
+          "intent": "password_reset",
+          "certainty": 1.0,
+          "conflicting_signals": false,
+          "goal": "Regain access by resetting the account password"
+        },
+        "backend": "similarity_fallback",
+        "device": "cpu",
+        "status": "completed"
+      },
+      {
+        "stage": "RETRIEVE_CONTEXT",
+        "summary": "Selected 1 help article(s).",
+        "input": {
+          "query": "I forgot my password and I am not receiving the reset email."
+        },
+        "output": {
+          "evidence": [
+            {
+              "article_id": "A2",
+              "title": "Password reset troubleshooting",
+              "relevance": 0.605
+            }
+          ]
+        },
+        "backend": "tfidf",
+        "device": "cpu",
+        "status": "completed"
+      },
+      {
+        "stage": "GENERATE_REPLY",
+        "summary": "Drafted a reply citing 1 article(s).",
+        "input": {
+          "message": "I forgot my password and I am not receiving the reset email.",
+          "intent": "password_reset",
+          "goal": "Regain access by resetting the account password",
+          "constraints": [],
+          "evidence": [
+            {
+              "article_id": "A2",
+              "title": "Password reset troubleshooting",
+              "snippet": "If the client does not receive a reset email, confirm the registered email address, check spam folders, wait a few minutes, and retry.",
+              "relevance": 0.605
+            }
+          ]
+        },
+        "output": {
+          "reply_draft": "Thanks for contacting us about resetting your password. Here are some general steps to try. Based on our help article \"Password reset troubleshooting\": If the client does not receive a reset email, confirm the registered email address, check spam folders, wait a few minutes, and retry. If this doesn't resolve it, a support agent can review your case.",
+          "cited_article_ids": [
+            "A2"
+          ],
+          "sufficient_evidence": true
+        },
+        "backend": "template_fallback",
+        "device": "cpu",
+        "status": "completed"
+      },
+      {
+        "stage": "VALIDATE_OUTPUT",
+        "summary": "Applied deterministic policy and validated the result schema.",
+        "input": {
+          "cited_article_ids": [
+            "A2"
+          ],
+          "sufficient_evidence": true
+        },
+        "output": {
+          "grounded": true,
+          "confidence": 0.802,
+          "needs_human_escalation": false,
+          "safety_flags": [],
+          "escalation_reasons": [],
+          "reply_replaced": false
+        },
+        "backend": "policy",
+        "device": "cpu",
+        "status": "completed"
+      },
+      {
+        "stage": "WRITE_RESULTS",
+        "summary": "Result queued for the run's JSON artifacts.",
+        "input": {},
+        "output": {
+          "results_file": "results.json",
+          "debug_file": "debug_report.json"
+        },
+        "backend": "json",
+        "device": "cpu",
+        "status": "completed"
+      }
+    ],
+    "T3": [
+      {
+        "stage": "LOAD_DATA",
+        "summary": "Loaded tickets, KB articles and labeled examples.",
+        "input": {},
+        "output": {
+          "tickets": 5,
+          "articles": 5,
+          "examples": 22
+        },
+        "backend": "json",
+        "device": "cpu",
+        "status": "completed"
+      },
+      {
+        "stage": "INDEX_KB",
+        "summary": "Indexed KB articles and labeled examples.",
+        "input": {},
+        "output": {
+          "articles": 5,
+          "examples": 22
+        },
+        "backend": "tfidf",
+        "device": "cpu",
+        "status": "completed"
+      },
+      {
+        "stage": "CLASSIFY_INTENT",
+        "summary": "Classified intent as withdrawal_issue.",
+        "input": {
+          "message": "Why was my withdrawal declined after verification?",
+          "similar_examples": [
+            {
+              "intent": "withdrawal_issue",
+              "score": 0.6,
+              "message": "My withdrawal request was rejected, why?"
+            }
+          ]
+        },
+        "output": {
+          "intent": "withdrawal_issue",
+          "certainty": 1.0,
+          "conflicting_signals": false,
+          "goal": "Understand a withdrawal problem or decline"
+        },
+        "backend": "similarity_fallback",
+        "device": "cpu",
+        "status": "completed"
+      },
+      {
+        "stage": "RETRIEVE_CONTEXT",
+        "summary": "Selected 1 help article(s).",
+        "input": {
+          "query": "Why was my withdrawal declined after verification?"
+        },
+        "output": {
+          "evidence": [
+            {
+              "article_id": "A3",
+              "title": "Withdrawal review and declines",
+              "relevance": 0.602
+            }
+          ]
+        },
+        "backend": "tfidf",
+        "device": "cpu",
+        "status": "completed"
+      },
+      {
+        "stage": "GENERATE_REPLY",
+        "summary": "Drafted a reply citing 1 article(s).",
+        "input": {
+          "message": "Why was my withdrawal declined after verification?",
+          "intent": "withdrawal_issue",
+          "goal": "Understand a withdrawal problem or decline",
+          "constraints": [],
+          "evidence": [
+            {
+              "article_id": "A3",
+              "title": "Withdrawal review and declines",
+              "snippet": "Withdrawals may be declined due to incomplete verification, mismatched payment method details, compliance review, or account restrictions.",
+              "relevance": 0.602
+            }
+          ]
+        },
+        "output": {
+          "reply_draft": "Thanks for reaching out about your withdrawal. Here is some general information. Based on our help article \"Withdrawal review and declines\": Withdrawals may be declined due to incomplete verification, mismatched payment method details, compliance review, or account restrictions. A support agent can review your account status if you need more help.",
+          "cited_article_ids": [
+            "A3"
+          ],
+          "sufficient_evidence": true
+        },
+        "backend": "template_fallback",
+        "device": "cpu",
+        "status": "completed"
+      },
+      {
+        "stage": "VALIDATE_OUTPUT",
+        "summary": "Applied deterministic policy and validated the result schema.",
+        "input": {
+          "cited_article_ids": [
+            "A3"
+          ],
+          "sufficient_evidence": true
+        },
+        "output": {
+          "grounded": true,
+          "confidence": 0.801,
+          "needs_human_escalation": true,
+          "safety_flags": [
+            "policy_sensitive"
+          ],
+          "escalation_reasons": [
+            "Withdrawal and account-lock cases are policy-sensitive and need a human to check account status."
+          ],
+          "reply_replaced": false
+        },
+        "backend": "policy",
+        "device": "cpu",
+        "status": "completed"
+      },
+      {
+        "stage": "WRITE_RESULTS",
+        "summary": "Result queued for the run's JSON artifacts.",
+        "input": {},
+        "output": {
+          "results_file": "results.json",
+          "debug_file": "debug_report.json"
+        },
+        "backend": "json",
+        "device": "cpu",
+        "status": "completed"
+      }
+    ],
+    "T4": [
+      {
+        "stage": "LOAD_DATA",
+        "summary": "Loaded tickets, KB articles and labeled examples.",
+        "input": {},
+        "output": {
+          "tickets": 5,
+          "articles": 5,
+          "examples": 22
+        },
+        "backend": "json",
+        "device": "cpu",
+        "status": "completed"
+      },
+      {
+        "stage": "INDEX_KB",
+        "summary": "Indexed KB articles and labeled examples.",
+        "input": {},
+        "output": {
+          "articles": 5,
+          "examples": 22
+        },
+        "backend": "tfidf",
+        "device": "cpu",
+        "status": "completed"
+      },
+      {
+        "stage": "CLASSIFY_INTENT",
+        "summary": "Classified intent as trading_advice_request.",
+        "input": {
+          "message": "Can you tell me which asset will go up today so I can make profit?",
+          "similar_examples": [
+            {
+              "intent": "trading_advice_request",
+              "score": 0.548,
+              "message": "Will gold go up tomorrow? Tell me what to trade"
+            },
+            {
+              "intent": "trading_advice_request",
+              "score": 0.224,
+              "message": "Give me a signal that guarantees profit"
+            },
+            {
+              "intent": "trading_advice_request",
+              "score": 0.186,
+              "message": "Which stock should I buy to make money this week?"
+            }
+          ]
+        },
+        "output": {
+          "intent": "trading_advice_request",
+          "certainty": 1.0,
+          "conflicting_signals": false,
+          "goal": "Obtain trading advice, which support cannot provide"
+        },
+        "backend": "similarity_fallback",
+        "device": "cpu",
+        "status": "completed"
+      },
+      {
+        "stage": "RETRIEVE_CONTEXT",
+        "summary": "Selected 1 help article(s).",
+        "input": {
+          "query": "Can you tell me which asset will go up today so I can make profit?"
+        },
+        "output": {
+          "evidence": [
+            {
+              "article_id": "A5",
+              "title": "No investment or trading advice",
+              "relevance": 0.331
+            }
+          ]
+        },
+        "backend": "tfidf",
+        "device": "cpu",
+        "status": "completed"
+      },
+      {
+        "stage": "GENERATE_REPLY",
+        "summary": "Drafted a reply citing 1 article(s).",
+        "input": {
+          "message": "Can you tell me which asset will go up today so I can make profit?",
+          "intent": "trading_advice_request",
+          "goal": "Obtain trading advice, which support cannot provide",
+          "constraints": [],
+          "evidence": [
+            {
+              "article_id": "A5",
+              "title": "No investment or trading advice",
+              "snippet": "Support agents must not provide market predictions, profit guarantees, or asset recommendations.",
+              "relevance": 0.331
+            }
+          ]
+        },
+        "output": {
+          "reply_draft": "I'm sorry, but we can't provide market predictions, trading recommendations, or profit guarantees. We're happy to help with questions about your account or our services. Based on our help article \"No investment or trading advice\": Support agents must not provide market predictions, profit guarantees, or asset recommendations. If you have another question, a support agent can review your case.",
+          "cited_article_ids": [
+            "A5"
+          ],
+          "sufficient_evidence": false
+        },
+        "backend": "template_fallback",
+        "device": "cpu",
+        "status": "completed"
+      },
+      {
+        "stage": "VALIDATE_OUTPUT",
+        "summary": "Applied deterministic policy and validated the result schema.",
+        "input": {
+          "cited_article_ids": [
+            "A5"
+          ],
+          "sufficient_evidence": false
+        },
+        "output": {
+          "grounded": false,
+          "confidence": 0.316,
+          "needs_human_escalation": true,
+          "safety_flags": [
+            "advice_request",
+            "insufficient_grounding",
+            "low_confidence"
+          ],
+          "escalation_reasons": [
+            "No help article matched the request closely enough to ground a reply.",
+            "Overall confidence is below the 0.45 review threshold."
+          ],
+          "reply_replaced": false
+        },
+        "backend": "policy",
+        "device": "cpu",
+        "status": "completed"
+      },
+      {
+        "stage": "WRITE_RESULTS",
+        "summary": "Result queued for the run's JSON artifacts.",
+        "input": {},
+        "output": {
+          "results_file": "results.json",
+          "debug_file": "debug_report.json"
+        },
+        "backend": "json",
+        "device": "cpu",
+        "status": "completed"
+      }
+    ],
+    "T5": [
+      {
+        "stage": "LOAD_DATA",
+        "summary": "Loaded tickets, KB articles and labeled examples.",
+        "input": {},
+        "output": {
+          "tickets": 5,
+          "articles": 5,
+          "examples": 22
+        },
+        "backend": "json",
+        "device": "cpu",
+        "status": "completed"
+      },
+      {
+        "stage": "INDEX_KB",
+        "summary": "Indexed KB articles and labeled examples.",
+        "input": {},
+        "output": {
+          "articles": 5,
+          "examples": 22
+        },
+        "backend": "tfidf",
+        "device": "cpu",
+        "status": "completed"
+      },
+      {
+        "stage": "CLASSIFY_INTENT",
+        "summary": "Classified intent as account_lock.",
+        "input": {
+          "message": "My account was locked after too many login attempts. What do I do now?",
+          "similar_examples": [
+            {
+              "intent": "account_lock",
+              "score": 0.651,
+              "message": "Too many login tries and now I cannot access my account"
+            },
+            {
+              "intent": "account_lock",
+              "score": 0.303,
+              "message": "My account is blocked after failed sign-in attempts"
+            },
+            {
+              "intent": "account_lock",
+              "score": 0.153,
+              "message": "I am locked out after entering the wrong password several times"
+            }
+          ]
+        },
+        "output": {
+          "intent": "account_lock",
+          "certainty": 1.0,
+          "conflicting_signals": false,
+          "goal": "Unlock or recover access to a locked account"
+        },
+        "backend": "similarity_fallback",
+        "device": "cpu",
+        "status": "completed"
+      },
+      {
+        "stage": "RETRIEVE_CONTEXT",
+        "summary": "Selected 1 help article(s).",
+        "input": {
+          "query": "My account was locked after too many login attempts. What do I do now?"
+        },
+        "output": {
+          "evidence": [
+            {
+              "article_id": "A4",
+              "title": "Account lock after failed sign-in attempts",
+              "relevance": 0.763
+            }
+          ]
+        },
+        "backend": "tfidf",
+        "device": "cpu",
+        "status": "completed"
+      },
+      {
+        "stage": "GENERATE_REPLY",
+        "summary": "Drafted a reply citing 1 article(s).",
+        "input": {
+          "message": "My account was locked after too many login attempts. What do I do now?",
+          "intent": "account_lock",
+          "goal": "Unlock or recover access to a locked account",
+          "constraints": [],
+          "evidence": [
+            {
+              "article_id": "A4",
+              "title": "Account lock after failed sign-in attempts",
+              "snippet": "For security reasons, repeated failed sign-in attempts can temporarily lock the account.",
+              "relevance": 0.763
+            }
+          ]
+        },
+        "output": {
+          "reply_draft": "Thanks for letting us know you're having trouble accessing your account. Here is some general guidance. Based on our help article \"Account lock after failed sign-in attempts\": For security reasons, repeated failed sign-in attempts can temporarily lock the account. If this doesn't resolve it, a support agent can review your case through a secure channel.",
+          "cited_article_ids": [
+            "A4"
+          ],
+          "sufficient_evidence": true
+        },
+        "backend": "template_fallback",
+        "device": "cpu",
+        "status": "completed"
+      },
+      {
+        "stage": "VALIDATE_OUTPUT",
+        "summary": "Applied deterministic policy and validated the result schema.",
+        "input": {
+          "cited_article_ids": [
+            "A4"
+          ],
+          "sufficient_evidence": true
+        },
+        "output": {
+          "grounded": true,
+          "confidence": 0.881,
+          "needs_human_escalation": true,
+          "safety_flags": [
+            "policy_sensitive"
+          ],
+          "escalation_reasons": [
+            "Withdrawal and account-lock cases are policy-sensitive and need a human to check account status."
+          ],
+          "reply_replaced": false
+        },
+        "backend": "policy",
+        "device": "cpu",
+        "status": "completed"
+      },
+      {
+        "stage": "WRITE_RESULTS",
+        "summary": "Result queued for the run's JSON artifacts.",
+        "input": {},
+        "output": {
+          "results_file": "results.json",
+          "debug_file": "debug_report.json"
+        },
+        "backend": "json",
+        "device": "cpu",
+        "status": "completed"
+      }
+    ]
+  }
+}
