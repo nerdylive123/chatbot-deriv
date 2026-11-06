@@ -298,3 +298,18 @@ def test_changed_bytes_in_both_reply_and_trace_fail_reproducibility(root):
         path.write_bytes(text.replace(marker, '"reply_draft": "Thanks ', 1).encode("utf-8"))
     errors = validate.validate(root)
     assert any("reproduc" in e and "line" in e for e in errors), errors
+
+
+def test_missing_examples_file_reports_error_instead_of_crashing(root):
+    (root / "examples.json").unlink()
+    errors = validate.validate(root)
+    assert any("examples.json" in e for e in errors), errors
+
+
+def test_unknown_recorded_retrieval_reports_error(root):
+    path = root / "debug_report.json"
+    report = json.loads(path.read_text(encoding="utf-8"))
+    report["backends"]["retrieval"] = "bm25"
+    path.write_text(json.dumps(report, indent=2) + "\n", encoding="utf-8")
+    errors = validate.validate(root)
+    assert any("bm25" in e for e in errors), errors

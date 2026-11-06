@@ -466,3 +466,10 @@ def test_uncited_draft_claiming_sufficient_evidence_is_not_grounded():
     assert out.grounded is False
     assert "insufficient_grounding" in out.safety_flags
     assert out.needs_human_escalation is True
+
+
+def test_confidence_uses_certainty_rounded_like_the_saved_artifact():
+    # Replay from saved (3-decimal) values must give the live decision exactly.
+    live = run(classification=clf(certainty=0.80151), evidence=[ev(relevance=0.605)])
+    replay = run(classification=clf(certainty=0.802), evidence=[ev(relevance=0.605)])
+    assert live.confidence == replay.confidence

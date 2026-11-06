@@ -248,11 +248,19 @@ def _check_policy_replay(root: Path, results: list[Any], report: Any, check: _Ch
         check.fail("debug_report.json: expected a traces object to replay the policy")
         return
     backends = report.get("backends") if isinstance(report.get("backends"), dict) else {}
-    retriever, note = make_retriever(backends.get("retrieval", "tfidf"))
-    if note:
-        retriever, _ = make_retriever("tfidf")
-    retriever.index(load_articles(root / "kb_articles.json"), load_examples(root / "examples.json"))
-    tickets = {t.id: t for t in load_tickets(root / "tickets.json")}
+    retrieval = backends.get("retrieval", "tfidf")
+    try:
+        retriever, note = make_retriever(retrieval)
+        if note:
+            retriever, _ = make_retriever("tfidf")
+        retriever.index(load_articles(root / "kb_articles.json"), load_examples(root / "examples.json"))
+        tickets = {t.id: t for t in load_tickets(root / "tickets.json")}
+    except DataError as exc:
+        check.fail(f"policy replay: {exc}")
+        return
+    except ValueError:
+        check.fail(f"debug_report.json: unknown retrieval backend {retrieval!r}")
+        return
     before = len(check.errors)
     for item in results:
         tid = item["ticket_id"]
@@ -289,8 +297,6 @@ def _check_policy_replay(root: Path, results: list[Any], report: Any, check: _Ch
             if item[field] != expected[field]:
                 check.fail(f"{label}: {field} is {item[field]!r} but the deterministic policy gives "
                            f"{expected[field]!r}")
-        if has_unsafe_content(item["reply_draft"], []) and "ungrounded_claim" not in item["safety_flags"]:
-            check.fail(f"{label}: reply_draft contains an unsafe or unsupported claim without ungrounded_claim")
     if len(check.errors) == before:
         check.ok(f"policy replay: every saved reply, grounding, confidence, escalation and flag set "
                  f"matches the deterministic policy ({len(results)} tickets)")

@@ -225,7 +225,10 @@ def evaluate(
     p_insufficient = PENALTY_INSUFFICIENT if insufficient else 0.0
     p_conflict = PENALTY_CONFLICT if classification.conflicting_signals else 0.0
     p_ungrounded = PENALTY_UNGROUNDED if ungrounded else 0.0
-    raw = 0.5 * classification.certainty + 0.5 * best_relevance
+    # Inputs use the same 3-decimal precision as the saved artifacts, so validate.py's
+    # replay from those artifacts reproduces this decision exactly.
+    certainty = round(classification.certainty, 3)
+    raw = 0.5 * certainty + 0.5 * best_relevance
     confidence = round(min(1.0, max(0.0, raw - p_insufficient - p_conflict - p_ungrounded)), 3)
     if confidence < LOW_CONFIDENCE:
         flags.add("low_confidence")
@@ -250,7 +253,7 @@ def evaluate(
         safety_flags=safety_flags,
         escalation_reasons=escalation_reasons,
         confidence_factors={
-            "classifier_certainty": round(classification.certainty, 3),
+            "classifier_certainty": certainty,
             "best_relevance": round(best_relevance, 3),
             "penalty_insufficient_evidence": round(p_insufficient, 3),
             "penalty_conflicting_signals": round(p_conflict, 3),
