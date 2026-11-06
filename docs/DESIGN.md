@@ -1,0 +1,101 @@
+# Support Ticket Pipeline: Design Notes
+
+## Decided architecture
+
+The pipeline runs seven explicit stages: `LOAD_DATA -> INDEX_KB -> CLASSIFY_INTENT -> RETRIEVE_CONTEXT -> GENERATE_REPLY -> VALIDATE_OUTPUT -> WRITE_RESULTS`. Each stage sits behind a small interface (`Retriever`, `Classifier`, `Generator`), so retrieval, classification, and generation can be swapped independently.
+
+**Default: offline mode.** It needs no API key, model download, or torch. `pip install -r requirements.txt` (Pydantic, pytest) is enough.
+- Retrieval: pure-Python, passage-level TF-IDF (smoothed IDF, sublinear TF, cosine). Each KB article is split into title and title+sentence passages; the article score is its best passage, and that passage becomes the snippet.
+- Classification: a similarity-weighted vote over the 3 nearest labeled examples in `examples.json`, using the same TF-IDF method. No keyword rules.
+- Generation: per-intent safe framing composed with the retrieved snippets.
+
+**Optional backends**, selected explicitly:
+- `--retrieval embedding`: `sentence-transformers/all-MiniLM-L6-v2` dense search, then `cross-encoder/ms-marco-MiniLM-L6-v2` reranks the top `min(5, corpus size)` candidates. Used only when installed (`requirements-local-models.txt`) and already cached; otherwise the pipeline falls back to TF-IDF and records why.
+- `--mode together`: `deepseek-ai/DeepSeek-V4.1-Flash-1017` classifies and `moonshotai/Kimi-K3.1-Pro` drafts, through `TOGETHER_API_KEY`. Every response is validated with Pydantic, and any failure falls back to the offline component.
+
+## Responsibility split
+
+1. Load and validate tickets, KB, and labeled examples.
+2. Index KB passages and examples (TF-IDF by default).
+3. Classify: find ≤3 similar examples, then the similarity classifier (or DeepSeek, which receives only the ticket and those examples) returns a validated `Classification`.
+4. Retrieve: the ticket message is the query. Keep the top article, plus up to two more with relevance ≥ 0.35. Order is deterministic, with article ID as the tie-breaker.
+5. Generate: the generator (template or Kimi) receives only the ticket, the compact classification, and the selected evidence (ID, title, snippet, relevance). It never receives candidate lists, example-search results, prompts, tool history, credentials, or other tickets. Kimi's prompt includes the snippets and forbids answering beyond them.
+6. Validate: deterministic policy computes `grounded`, confidence, flags, and escalation. Model text never sets its own safety status.
+7. Write `results.json` and `debug_report.json`.
+
+## Confidence, escalation, and safety
+
+`confidence = clamp(0.5 × classifier certainty + 0.5 × best relevance − penalties, 0, 1)`, with penalties of 0.35 for insufficient evidence, 0.20 for conflicting signals, and 0.40 for an ungrounded claim. Confidence below **0.45** sets `low_confidence`.
+
+Certainty is the winning label's share of the summed example similarity. Signals conflict when the runner-up has ≥ 60% of the winner's similarity mass.
+
+Escalation is a separate rule decision. It triggers on:
+- low confidence
+- best relevance < 0.35, or no evidence
+- a policy-sensitive intent (`withdrawal_issue`, `account_lock`)
+- conflicting signals
+- an account-specific request
+- an ungrounded claim
+
+Flags, in fixed order: `advice_request`, `insufficient_grounding`, `policy_sensitive`, `low_confidence`, `account_specific_request`, `conflicting_signals`, `ungrounded_claim`.
+
+Output safety checks scan the draft for market predictions, profit guarantees, asset recommendations, payment/withdrawal outcome promises, and account specifics absent from evidence. Any hit sets `ungrounded_claim`, marks the result not grounded, and escalates. Trading-advice requests always get a polite refusal. If the refusal is missing, the safe template refusal replaces the draft.
+
+`debug_report.json` gives each ticket a flat entry: `ticket_id`, `predicted_intent`, `retrieved_article_titles`, `escalated`, plain-English `escalation_reasons`, `confidence_factors`, `backends`. Full stage traces sit under a separate `traces` key.
+
+## Reproducibility
+
+The committed `results.json` and `debug_report.json` are generated in offline TF-IDF mode, which uses only the standard library and deterministic ordering, so an evaluator's rerun matches byte-for-byte on any machine. All floats are rounded to 3 decimals before serialization, and traces exclude timings. `validate.py` reads the recorded mode from `debug_report.json`, reruns in that mode, and byte-compares. If the recorded mode needs a key that's missing, it fails with a clear message. The optional embedding backend is reproducible only on the same machine and library versions. Together mode isn't guaranteed reproducible.
+
+## Delivery and testing
+
+Every behavior follows RED → GREEN → REFACTOR. Acceptance tests run the real offline pipeline on the supplied files:
+- T4 is classified `trading_advice_request`, refused politely, and flagged `advice_request`, with no prediction text.
+- T1 retrieves `A1`.
+- Every result has exactly the 8 required keys.
+- Every ticket gets one result.
+
+Tests may name sample IDs; pipeline logic never does. A renamed-ID test enforces this. Provider and local-model calls are faked in unit tests. Real calls are opt-in smoke scripts.
+
+Run: `python main.py`. Validate: `python validate.py`. Test: `python -m pytest`.
+
+## Requirement coverage
+
+| Brief item | Design element | Proof |
+|---|---|---|
+| MUST 1 pipeline, clean checkout | 7 named stages; offline default | `test_pipeline` stage order; clean-env run |
+| MUST 2 classification | 6-label enum; example-vote classifier / schema-bound DeepSeek | `test_fallback` (5/5 samples), `test_agents` |
+| MUST 3 retrieval | Passage TF-IDF, top 1–3, ID tie-break, separate stage | `test_retrieval`; `validate.py` ID check |
+| MUST 4 grounded reply | Evidence-only generator input, cited IDs, refusal framing | `test_fallback`, `test_agents`, `test_policy` |
+| MUST 5 validation | `TicketResult` (extra keys forbidden) + policy checks | `test_policy`; `validate.py` schema checks |
+| MUST 6 basic tests | Real-pipeline acceptance tests | `test_acceptance.py`; `validate.py` T1/T4 |
+| SHOULD 7 confidence/escalation | Formula, penalties, 0.45 cutoff, trigger rules | `test_policy` |
+| SHOULD 8 safety flags | Seven fixed-order flags | `test_policy` (one test per flag) |
+| SHOULD 9 explainability | Flat `debug_report.json` entries | `test_pipeline` debug-shape test |
+| STRETCH 10 swappable | `Retriever` / `Classifier` / `Generator` protocols | Fake-injection tests |
+| STRETCH 11 offline fallback | Default path needs no LLM or key | Acceptance tests run without a key |
+| Required artifacts | Committed inputs, outputs, README, `validate.py`, tests | `validate.py` file-existence check |
+| Validation checks | Files, JSON, one result each, schema, T4, IDs, reproducibility | `validate.py`, `test_validate.py` |
+| Technical constraints | Local files only; no ID logic; no hardcoded answers; no trading recs | Renamed-ID, lazy-import, and policy tests |
+
+## Known limits
+
+- Retrieval and examples are English-oriented. Non-English tickets usually score near zero and escalate rather than get a confident answer.
+- Scores are not calibrated probabilities. The 0.35 and 0.45 thresholds are conservative and hand-set. T4's best lexical score (~0.33 in a prototype) falls just under 0.35, so it is refused and also escalated for insufficient grounding.
+- The labeled example set is small (≥18), so classification of paraphrases far from the examples is weak.
+- Output safety checks are phrase-based and conservative, so they may over-escalate.
+- Offline drafts are composed from per-intent framings plus retrieved snippets, not hardcoded per ticket. They read as templated.
+
+## Sources
+
+Model IDs and structured-output support come from Together's documentation. Real calls are verified only by the opt-in smoke test.
+
+- https://docs.together.ai/docs/serverless/models
+- https://docs.together.ai/docs/changelog
+- https://docs.together.ai/docs/json-mode
+- https://www.sbert.net/docs/sentence_transformer/pretrained_models.html
+- https://www.sbert.net/docs/pretrained-models/ce-msmarco.html
+
+## Optional: execution inspector
+
+Not required by the challenge. A FastAPI page (`pip install -r requirements-web.txt`, then `python -m uvicorn support_pipeline.web:app`) shows a ticket selector, the ordered stage list, and a stage inspector with each stage's compact input/output. A boundary label says generation receives only the selected evidence. It uses native controls, a vertical layout on narrow screens, a live region for run status, and text for every state as well as color. Credentials and provider logs never appear.
