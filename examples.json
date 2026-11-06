@@ -1,0 +1,134 @@
+[
+  {
+    "id": "EX01",
+    "message": "My card payment went through but the money is not in my account yet",
+    "intent": "deposit_issue",
+    "language": "en"
+  },
+  {
+    "id": "EX02",
+    "message": "Deposit made via e-wallet an hour ago and balance has not updated",
+    "intent": "deposit_issue",
+    "language": "en"
+  },
+  {
+    "id": "EX03",
+    "message": "The funds I added are missing from my balance",
+    "intent": "deposit_issue",
+    "language": "en"
+  },
+  {
+    "id": "EX04",
+    "message": "Hice un depósito con tarjeta y el saldo no cambia",
+    "intent": "deposit_issue",
+    "language": "es"
+  },
+  {
+    "id": "EX05",
+    "message": "I can't remember my password, how do I reset it?",
+    "intent": "password_reset",
+    "language": "en"
+  },
+  {
+    "id": "EX06",
+    "message": "The password reset link never arrived in my inbox",
+    "intent": "password_reset",
+    "language": "en"
+  },
+  {
+    "id": "EX07",
+    "message": "Reset email is not coming, I checked spam",
+    "intent": "password_reset",
+    "language": "en"
+  },
+  {
+    "id": "EX08",
+    "message": "J'ai oublié mon mot de passe",
+    "intent": "password_reset",
+    "language": "fr"
+  },
+  {
+    "id": "EX09",
+    "message": "My withdrawal request was rejected, why?",
+    "intent": "withdrawal_issue",
+    "language": "en"
+  },
+  {
+    "id": "EX10",
+    "message": "I requested a payout days ago and it is still pending",
+    "intent": "withdrawal_issue",
+    "language": "en"
+  },
+  {
+    "id": "EX11",
+    "message": "Cashing out failed after I uploaded my documents",
+    "intent": "withdrawal_issue",
+    "language": "en"
+  },
+  {
+    "id": "EX12",
+    "message": "I am locked out after entering the wrong password several times",
+    "intent": "account_lock",
+    "language": "en"
+  },
+  {
+    "id": "EX13",
+    "message": "My account is blocked after failed sign-in attempts",
+    "intent": "account_lock",
+    "language": "en"
+  },
+  {
+    "id": "EX14",
+    "message": "Too many login tries and now I cannot access my account",
+    "intent": "account_lock",
+    "language": "en"
+  },
+  {
+    "id": "EX15",
+    "message": "Which stock should I buy to make money this week?",
+    "intent": "trading_advice_request",
+    "language": "en"
+  },
+  {
+    "id": "EX16",
+    "message": "Will gold go up tomorrow? Tell me what to trade",
+    "intent": "trading_advice_request",
+    "language": "en"
+  },
+  {
+    "id": "EX17",
+    "message": "Give me a signal that guarantees profit",
+    "intent": "trading_advice_request",
+    "language": "en"
+  },
+  {
+    "id": "EX18",
+    "message": "¿Qué acción debo comprar para ganar dinero?",
+    "intent": "trading_advice_request",
+    "language": "es"
+  },
+  {
+    "id": "EX19",
+    "message": "How do I change the language of the app?",
+    "intent": "other",
+    "language": "en"
+  },
+  {
+    "id": "EX20",
+    "message": "Do you have a mobile app?",
+    "intent": "other",
+    "language": "en"
+  },
+  {
+    "id": "EX21",
+    "message": "I want to update my phone number",
+    "intent": "other",
+    "language": "en"
+  },
+  {
+    "id": "EX22",
+    "message": "Where can I download my monthly statement?",
+    "intent": "other",
+    "language": "en"
+  }
+]

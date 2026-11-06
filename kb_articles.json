@@ -1,0 +1,27 @@
+[
+  {
+    "article_id": "A1",
+    "title": "Card deposit processing times",
+    "body": "Card deposits are usually instant, but may be delayed by issuer checks, network issues, or pending review. Ask the client to confirm successful payment, check transaction history, and wait up to the documented processing window before escalating."
+  },
+  {
+    "article_id": "A2",
+    "title": "Password reset troubleshooting",
+    "body": "If the client does not receive a reset email, confirm the registered email address, check spam folders, wait a few minutes, and retry. Repeated failed attempts may trigger temporary rate limits."
+  },
+  {
+    "article_id": "A3",
+    "title": "Withdrawal review and declines",
+    "body": "Withdrawals may be declined due to incomplete verification, mismatched payment method details, compliance review, or account restrictions. Support should not promise approval times without checking account status."
+  },
+  {
+    "article_id": "A4",
+    "title": "Account lock after failed sign-in attempts",
+    "body": "For security reasons, repeated failed sign-in attempts can temporarily lock the account. Advise the client to wait for the cooldown period or use the secure recovery flow. Avoid sharing account-specific details in unsecured channels."
+  },
+  {
+    "article_id": "A5",
+    "title": "No investment or trading advice",
+    "body": "Support agents must not provide market predictions, profit guarantees, or asset recommendations. Such requests should be politely declined and redirected to general educational resources if available."
+  }
+]

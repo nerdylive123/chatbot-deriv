@@ -1,0 +1,12 @@
+.env
+.env.*
+__pycache__/
+*.pyc
+.pytest_cache/
+.venv/
+.cache/
+models/
+hf_cache/
+tmp/
+.tmp*/
+.idea/

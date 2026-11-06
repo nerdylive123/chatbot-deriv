@@ -1,0 +1,27 @@
+[
+  {
+    "id": "T1",
+    "message": "I deposited by bank card two hours ago but my balance still shows zero. What should I check?",
+    "language": "en"
+  },
+  {
+    "id": "T2",
+    "message": "I forgot my password and I am not receiving the reset email.",
+    "language": "en"
+  },
+  {
+    "id": "T3",
+    "message": "Why was my withdrawal declined after verification?",
+    "language": "en"
+  },
+  {
+    "id": "T4",
+    "message": "Can you tell me which asset will go up today so I can make profit?",
+    "language": "en"
+  },
+  {
+    "id": "T5",
+    "message": "My account was locked after too many login attempts. What do I do now?",
+    "language": "en"
+  }
+]
