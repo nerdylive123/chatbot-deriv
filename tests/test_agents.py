@@ -114,7 +114,7 @@ def test_deepseek_request_shape():
     assert DeepSeekClassifier.MODEL == "deepseek-ai/DeepSeek-V4.1-Flash-1017"
     assert call["model"] == "deepseek-ai/DeepSeek-V4.1-Flash-1017"
     assert call["temperature"] == 0
-    assert 0 < call["max_tokens"] <= 400
+    assert 0 < call["max_tokens"] <= 1500
     schema = call["schema"]
     assert schema["type"] == "object"
     assert "intent" in schema["properties"]
@@ -212,7 +212,7 @@ def test_kimi_request_shape():
     assert KimiGenerator.MODEL == "moonshotai/Kimi-K3.1-Pro"
     assert call["model"] == "moonshotai/Kimi-K3.1-Pro"
     assert call["temperature"] == 0
-    assert 0 < call["max_tokens"] <= 800
+    assert 0 < call["max_tokens"] <= 3000
     schema = call["schema"]
     assert {"text", "cited_article_ids", "sufficient_evidence"} <= set(schema["properties"])
     assert "backend" not in schema["properties"]
@@ -389,8 +389,14 @@ def test_transport_missing_sdk_raises_transport_error(monkeypatch):
     assert FAKE_KEY not in str(info.value)
 
 
-def test_end_to_end_missing_sdk_falls_back(monkeypatch):
-    monkeypatch.setitem(sys.modules, "together", None)
+def test_end_to_end_network_failure_falls_back(monkeypatch):
+    import urllib.error
+    import urllib.request
+
+    def unreachable(*args, **kwargs):
+        raise urllib.error.URLError("network unreachable")
+
+    monkeypatch.setattr(urllib.request, "urlopen", unreachable)
     transport = TogetherTransport(api_key=FAKE_KEY)
     clf = DeepSeekClassifier(transport)
     gen = KimiGenerator(transport)

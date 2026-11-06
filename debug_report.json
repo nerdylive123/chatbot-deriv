@@ -1,9 +1,9 @@
 {
-  "mode": "offline",
+  "mode": "together",
   "backends": {
     "retrieval": "tfidf",
-    "classifier": "similarity_fallback",
-    "generator": "template_fallback"
+    "classifier": "deepseek",
+    "generator": "kimi"
   },
   "tickets": [
     {
@@ -15,17 +15,17 @@
       "escalated": false,
       "escalation_reasons": [],
       "confidence_factors": {
-        "classifier_certainty": 0.581,
+        "classifier_certainty": 0.97,
         "best_relevance": 0.507,
         "penalty_insufficient_evidence": 0.0,
         "penalty_conflicting_signals": 0.0,
         "penalty_ungrounded_claim": 0.0,
-        "confidence": 0.544
+        "confidence": 0.738
       },
       "backends": {
         "retrieval": "tfidf",
-        "classifier": "similarity_fallback",
-        "generator": "template_fallback"
+        "classifier": "deepseek",
+        "generator": "kimi"
       }
     },
     {
@@ -37,17 +37,17 @@
       "escalated": false,
       "escalation_reasons": [],
       "confidence_factors": {
-        "classifier_certainty": 1.0,
+        "classifier_certainty": 0.98,
         "best_relevance": 0.605,
         "penalty_insufficient_evidence": 0.0,
         "penalty_conflicting_signals": 0.0,
         "penalty_ungrounded_claim": 0.0,
-        "confidence": 0.802
+        "confidence": 0.792
       },
       "backends": {
         "retrieval": "tfidf",
-        "classifier": "similarity_fallback",
-        "generator": "template_fallback"
+        "classifier": "deepseek",
+        "generator": "kimi"
       }
     },
     {
@@ -58,20 +58,22 @@
       ],
       "escalated": true,
       "escalation_reasons": [
-        "Withdrawal and account-lock cases are policy-sensitive and need a human to check account status."
+        "No help article matched the request closely enough to ground a reply.",
+        "Withdrawal and account-lock cases are policy-sensitive and need a human to check account status.",
+        "Overall confidence is below the 0.45 review threshold."
       ],
       "confidence_factors": {
-        "classifier_certainty": 1.0,
+        "classifier_certainty": 0.95,
         "best_relevance": 0.602,
-        "penalty_insufficient_evidence": 0.0,
+        "penalty_insufficient_evidence": 0.35,
         "penalty_conflicting_signals": 0.0,
         "penalty_ungrounded_claim": 0.0,
-        "confidence": 0.801
+        "confidence": 0.426
       },
       "backends": {
         "retrieval": "tfidf",
-        "classifier": "similarity_fallback",
-        "generator": "template_fallback"
+        "classifier": "deepseek",
+        "generator": "kimi"
       }
     },
     {
@@ -86,17 +88,17 @@
         "Overall confidence is below the 0.45 review threshold."
       ],
       "confidence_factors": {
-        "classifier_certainty": 1.0,
+        "classifier_certainty": 0.98,
         "best_relevance": 0.331,
         "penalty_insufficient_evidence": 0.35,
         "penalty_conflicting_signals": 0.0,
         "penalty_ungrounded_claim": 0.0,
-        "confidence": 0.316
+        "confidence": 0.305
       },
       "backends": {
         "retrieval": "tfidf",
-        "classifier": "similarity_fallback",
-        "generator": "template_fallback"
+        "classifier": "deepseek",
+        "generator": "kimi"
       }
     },
     {
@@ -110,17 +112,17 @@
         "Withdrawal and account-lock cases are policy-sensitive and need a human to check account status."
       ],
       "confidence_factors": {
-        "classifier_certainty": 1.0,
+        "classifier_certainty": 0.98,
         "best_relevance": 0.763,
         "penalty_insufficient_evidence": 0.0,
         "penalty_conflicting_signals": 0.0,
         "penalty_ungrounded_claim": 0.0,
-        "confidence": 0.881
+        "confidence": 0.871
       },
       "backends": {
         "retrieval": "tfidf",
-        "classifier": "similarity_fallback",
-        "generator": "template_fallback"
+        "classifier": "deepseek",
+        "generator": "kimi"
       }
     }
   ],
@@ -176,12 +178,12 @@
         },
         "output": {
           "intent": "deposit_issue",
-          "certainty": 0.581,
+          "certainty": 0.97,
           "conflicting_signals": false,
-          "goal": "Resolve a delayed or missing deposit"
+          "goal": "Customer wants their recent bank card deposit reflected in their balance or guidance on what to check."
         },
-        "backend": "similarity_fallback",
-        "device": "cpu",
+        "backend": "deepseek",
+        "device": "remote",
         "status": "completed"
       },
       {
@@ -209,26 +211,30 @@
         "input": {
           "message": "I deposited by bank card two hours ago but my balance still shows zero. What should I check?",
           "intent": "deposit_issue",
-          "goal": "Resolve a delayed or missing deposit",
-          "constraints": [],
+          "goal": "Customer wants their recent bank card deposit reflected in their balance or guidance on what to check.",
+          "constraints": [
+            "Verify deposit status and timing",
+            "Do not request sensitive card or account credentials",
+            "Follow standard deposit troubleshooting and escalation steps"
+          ],
           "evidence": [
             {
               "article_id": "A1",
               "title": "Card deposit processing times",
-              "snippet": "Card deposits are usually instant, but may be delayed by issuer checks, network issues, or pending review.",
+              "snippet": "Card deposits are usually instant, but may be delayed by issuer checks, network issues, or pending review. Ask the client to confirm successful payment, check transaction history, and wait up to the documented processing window before escalating.",
               "relevance": 0.507
             }
           ]
         },
         "output": {
-          "reply_draft": "Thanks for reaching out about your deposit. Here is some general guidance that may help. Based on our help article \"Card deposit processing times\": Card deposits are usually instant, but may be delayed by issuer checks, network issues, or pending review. If this doesn't resolve it, a support agent can review your case.",
+          "reply_draft": "Please confirm that your bank card payment was completed successfully and check your transaction history for the deposit and its status. Card deposits are usually instant, but they can be delayed by issuer checks, network issues, or a pending review. Please allow the documented processing window to elapse; if the deposit is still not reflected after that, contact support so the issue can be escalated.",
           "cited_article_ids": [
             "A1"
           ],
           "sufficient_evidence": true
         },
-        "backend": "template_fallback",
-        "device": "cpu",
+        "backend": "kimi",
+        "device": "remote",
         "status": "completed"
       },
       {
@@ -242,7 +248,7 @@
         },
         "output": {
           "grounded": true,
-          "confidence": 0.544,
+          "confidence": 0.738,
           "needs_human_escalation": false,
           "safety_flags": [],
           "escalation_reasons": [],
@@ -316,12 +322,12 @@
         },
         "output": {
           "intent": "password_reset",
-          "certainty": 1.0,
+          "certainty": 0.98,
           "conflicting_signals": false,
-          "goal": "Regain access by resetting the account password"
+          "goal": "Reset the customer's account password and help them receive the reset email."
         },
-        "backend": "similarity_fallback",
-        "device": "cpu",
+        "backend": "deepseek",
+        "device": "remote",
         "status": "completed"
       },
       {
@@ -349,26 +355,31 @@
         "input": {
           "message": "I forgot my password and I am not receiving the reset email.",
           "intent": "password_reset",
-          "goal": "Regain access by resetting the account password",
-          "constraints": [],
+          "goal": "Reset the customer's account password and help them receive the reset email.",
+          "constraints": [
+            "Verify the customer's identity before assisting with account access",
+            "Do not request or expose sensitive credentials",
+            "Suggest checking spam/junk and email delivery issues",
+            "Escalate if reset emails continue not to arrive"
+          ],
           "evidence": [
             {
               "article_id": "A2",
               "title": "Password reset troubleshooting",
-              "snippet": "If the client does not receive a reset email, confirm the registered email address, check spam folders, wait a few minutes, and retry.",
+              "snippet": "If the client does not receive a reset email, confirm the registered email address, check spam folders, wait a few minutes, and retry. Repeated failed attempts may trigger temporary rate limits.",
               "relevance": 0.605
             }
           ]
         },
         "output": {
-          "reply_draft": "Thanks for contacting us about resetting your password. Here are some general steps to try. Based on our help article \"Password reset troubleshooting\": If the client does not receive a reset email, confirm the registered email address, check spam folders, wait a few minutes, and retry. If this doesn't resolve it, a support agent can review your case.",
+          "reply_draft": "Please confirm that you’re checking the inbox for the email address registered to your account, and check your spam/junk folders. Wait a few minutes, then retry the password reset. Avoid repeated attempts in quick succession, as they may trigger a temporary rate limit. If the reset email still does not arrive, please reply to this ticket so the issue can be escalated to a support agent. We’ll need to verify your identity before helping with account access; please do not share your password or other sensitive credentials.",
           "cited_article_ids": [
             "A2"
           ],
           "sufficient_evidence": true
         },
-        "backend": "template_fallback",
-        "device": "cpu",
+        "backend": "kimi",
+        "device": "remote",
         "status": "completed"
       },
       {
@@ -382,7 +393,7 @@
         },
         "output": {
           "grounded": true,
-          "confidence": 0.802,
+          "confidence": 0.792,
           "needs_human_escalation": false,
           "safety_flags": [],
           "escalation_reasons": [],
@@ -446,12 +457,12 @@
         },
         "output": {
           "intent": "withdrawal_issue",
-          "certainty": 1.0,
+          "certainty": 0.95,
           "conflicting_signals": false,
-          "goal": "Understand a withdrawal problem or decline"
+          "goal": "Customer wants to know why their withdrawal was declined after verification."
         },
-        "backend": "similarity_fallback",
-        "device": "cpu",
+        "backend": "deepseek",
+        "device": "remote",
         "status": "completed"
       },
       {
@@ -479,26 +490,30 @@
         "input": {
           "message": "Why was my withdrawal declined after verification?",
           "intent": "withdrawal_issue",
-          "goal": "Understand a withdrawal problem or decline",
-          "constraints": [],
+          "goal": "Customer wants to know why their withdrawal was declined after verification.",
+          "constraints": [
+            "Check the withdrawal status and any decline reason",
+            "Explain the outcome without exposing sensitive account details",
+            "Follow compliance and verification procedures"
+          ],
           "evidence": [
             {
               "article_id": "A3",
               "title": "Withdrawal review and declines",
-              "snippet": "Withdrawals may be declined due to incomplete verification, mismatched payment method details, compliance review, or account restrictions.",
+              "snippet": "Withdrawals may be declined due to incomplete verification, mismatched payment method details, compliance review, or account restrictions. Support should not promise approval times without checking account status.",
               "relevance": 0.602
             }
           ]
         },
         "output": {
-          "reply_draft": "Thanks for reaching out about your withdrawal. Here is some general information. Based on our help article \"Withdrawal review and declines\": Withdrawals may be declined due to incomplete verification, mismatched payment method details, compliance review, or account restrictions. A support agent can review your account status if you need more help.",
+          "reply_draft": "I’m sorry your withdrawal was declined. Withdrawals can generally be declined due to incomplete verification, mismatched payment method details, compliance review, or account restrictions. However, the available information does not confirm which reason applies to your withdrawal or its current status, and I can’t infer those account-specific details. A support agent will follow up to review the withdrawal status and decline reason in line with compliance and verification procedures.",
           "cited_article_ids": [
             "A3"
           ],
-          "sufficient_evidence": true
+          "sufficient_evidence": false
         },
-        "backend": "template_fallback",
-        "device": "cpu",
+        "backend": "kimi",
+        "device": "remote",
         "status": "completed"
       },
       {
@@ -508,17 +523,21 @@
           "cited_article_ids": [
             "A3"
           ],
-          "sufficient_evidence": true
+          "sufficient_evidence": false
         },
         "output": {
-          "grounded": true,
-          "confidence": 0.801,
+          "grounded": false,
+          "confidence": 0.426,
           "needs_human_escalation": true,
           "safety_flags": [
-            "policy_sensitive"
+            "insufficient_grounding",
+            "policy_sensitive",
+            "low_confidence"
           ],
           "escalation_reasons": [
-            "Withdrawal and account-lock cases are policy-sensitive and need a human to check account status."
+            "No help article matched the request closely enough to ground a reply.",
+            "Withdrawal and account-lock cases are policy-sensitive and need a human to check account status.",
+            "Overall confidence is below the 0.45 review threshold."
           ],
           "reply_replaced": false
         },
@@ -590,12 +609,12 @@
         },
         "output": {
           "intent": "trading_advice_request",
-          "certainty": 1.0,
+          "certainty": 0.98,
           "conflicting_signals": false,
-          "goal": "Obtain trading advice, which support cannot provide"
+          "goal": "Customer wants a prediction or recommendation about which asset to trade for profit."
         },
-        "backend": "similarity_fallback",
-        "device": "cpu",
+        "backend": "deepseek",
+        "device": "remote",
         "status": "completed"
       },
       {
@@ -623,26 +642,29 @@
         "input": {
           "message": "Can you tell me which asset will go up today so I can make profit?",
           "intent": "trading_advice_request",
-          "goal": "Obtain trading advice, which support cannot provide",
-          "constraints": [],
+          "goal": "Customer wants a prediction or recommendation about which asset to trade for profit.",
+          "constraints": [
+            "Do not provide trading advice or profit guarantees",
+            "Respond generically and avoid recommending specific assets"
+          ],
           "evidence": [
             {
               "article_id": "A5",
               "title": "No investment or trading advice",
-              "snippet": "Support agents must not provide market predictions, profit guarantees, or asset recommendations.",
+              "snippet": "Support agents must not provide market predictions, profit guarantees, or asset recommendations. Such requests should be politely declined and redirected to general educational resources if available.",
               "relevance": 0.331
             }
           ]
         },
         "output": {
-          "reply_draft": "I'm sorry, but we can't provide market predictions, trading recommendations, or profit guarantees. We're happy to help with questions about your account or our services. Based on our help article \"No investment or trading advice\": Support agents must not provide market predictions, profit guarantees, or asset recommendations. If you have another question, a support agent can review your case.",
+          "reply_draft": "I’m sorry, but I can’t predict which asset will go up today, recommend a specific asset to trade, or guarantee that you’ll make a profit.",
           "cited_article_ids": [
             "A5"
           ],
-          "sufficient_evidence": false
+          "sufficient_evidence": true
         },
-        "backend": "template_fallback",
-        "device": "cpu",
+        "backend": "kimi",
+        "device": "remote",
         "status": "completed"
       },
       {
@@ -652,11 +674,11 @@
           "cited_article_ids": [
             "A5"
           ],
-          "sufficient_evidence": false
+          "sufficient_evidence": true
         },
         "output": {
           "grounded": false,
-          "confidence": 0.316,
+          "confidence": 0.305,
           "needs_human_escalation": true,
           "safety_flags": [
             "advice_request",
@@ -737,12 +759,12 @@
         },
         "output": {
           "intent": "account_lock",
-          "certainty": 1.0,
+          "certainty": 0.98,
           "conflicting_signals": false,
-          "goal": "Unlock or recover access to a locked account"
+          "goal": "Regain access to a locked account"
         },
-        "backend": "similarity_fallback",
-        "device": "cpu",
+        "backend": "deepseek",
+        "device": "remote",
         "status": "completed"
       },
       {
@@ -770,26 +792,30 @@
         "input": {
           "message": "My account was locked after too many login attempts. What do I do now?",
           "intent": "account_lock",
-          "goal": "Unlock or recover access to a locked account",
-          "constraints": [],
+          "goal": "Regain access to a locked account",
+          "constraints": [
+            "Verify customer identity before account recovery",
+            "Follow the platform's account unlock process",
+            "Do not request or share passwords or sensitive credentials"
+          ],
           "evidence": [
             {
               "article_id": "A4",
               "title": "Account lock after failed sign-in attempts",
-              "snippet": "For security reasons, repeated failed sign-in attempts can temporarily lock the account.",
+              "snippet": "For security reasons, repeated failed sign-in attempts can temporarily lock the account. Advise the client to wait for the cooldown period or use the secure recovery flow. Avoid sharing account-specific details in unsecured channels.",
               "relevance": 0.763
             }
           ]
         },
         "output": {
-          "reply_draft": "Thanks for letting us know you're having trouble accessing your account. Here is some general guidance. Based on our help article \"Account lock after failed sign-in attempts\": For security reasons, repeated failed sign-in attempts can temporarily lock the account. If this doesn't resolve it, a support agent can review your case through a secure channel.",
+          "reply_draft": "Repeated failed sign-in attempts can temporarily lock an account for security reasons. Please wait for the cooldown period before trying again, or use the platform’s secure recovery flow. Complete any identity verification through that secure flow, and do not share your password or other sensitive credentials in this chat or other unsecured channels.",
           "cited_article_ids": [
             "A4"
           ],
           "sufficient_evidence": true
         },
-        "backend": "template_fallback",
-        "device": "cpu",
+        "backend": "kimi",
+        "device": "remote",
         "status": "completed"
       },
       {
@@ -803,7 +829,7 @@
         },
         "output": {
           "grounded": true,
-          "confidence": 0.881,
+          "confidence": 0.871,
           "needs_human_escalation": true,
           "safety_flags": [
             "policy_sensitive"

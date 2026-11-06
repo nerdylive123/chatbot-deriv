@@ -34,7 +34,6 @@ from support_pipeline.pipeline import MODES
 from support_pipeline.policy import has_refusal, has_unsafe_content
 from support_pipeline.retrieval import _embedding_unavailable_reason
 from support_pipeline.serialize import DEBUG_FILE, RESULTS_FILE
-from support_pipeline.together_client import ENV_VAR, has_together_key
 
 REPO_ROOT = Path(__file__).resolve().parent
 REQUIRED_FILES = ("tickets.json", "kb_articles.json", RESULTS_FILE, DEBUG_FILE, "README.md")
@@ -167,42 +166,61 @@ def _check_reproducibility(root: Path, report: Any, check: _Check) -> None:
     if retrieval not in ("tfidf", "embedding"):
         check.fail(f"debug_report.json: unknown retrieval backend {retrieval!r}")
         return
-    if mode == "together" and not has_together_key():
-        check.fail(
-            f"results.json was generated in together mode; rerun `python main.py` (offline) "
-            f"or provide {ENV_VAR}"
-        )
-        return
     if retrieval == "embedding":
         reason = embedding_unavailable_reason()
         if reason:
             check.fail(
                 "results.json was generated with the embedding retrieval backend, which is not "
-                f"available here ({reason}); rerun `python main.py` (tfidf) or install and cache "
-                "the local models (requirements-local-models.txt)"
+                f"available here ({reason}); rerun `python main.py --retrieval tfidf` or install and "
+                "cache the local models (requirements-local-models.txt)"
             )
             return
 
+    # Reruns are always offline: no key, no network, no cost. Retrieval is local and
+    # deterministic in every mode, so it is compared exactly; LLM wording is not
+    # byte-reproducible, so together-mode reply text is checked by schema and safety only.
     with tempfile.TemporaryDirectory(prefix="validate-rerun-") as tmp:
-        argv = ["--mode", mode, "--retrieval", retrieval, "--data-dir", str(root), "--out", tmp]
-        sink = io.StringIO()
-        with contextlib.redirect_stdout(sink), contextlib.redirect_stderr(sink):
-            code = cli.main(argv)
-        if code != 0:
-            detail = sink.getvalue().strip().splitlines()
-            check.fail(f"reproducibility: rerun `python main.py` failed (exit {code}): "
-                       f"{detail[-1] if detail else 'no output'}")
+        first, second = Path(tmp) / "a", Path(tmp) / "b"
+        for out in (first, second):
+            argv = ["--mode", "offline", "--retrieval", retrieval, "--data-dir", str(root), "--out", str(out)]
+            sink = io.StringIO()
+            with contextlib.redirect_stdout(sink), contextlib.redirect_stderr(sink):
+                code = cli.main(argv)
+            if code != 0:
+                detail = sink.getvalue().strip().splitlines()
+                check.fail(f"reproducibility: rerun `python main.py --mode offline` failed (exit {code}): "
+                           f"{detail[-1] if detail else 'no output'}")
+                return
+
+        if mode == "offline":
+            mismatched = False
+            for name in (RESULTS_FILE, DEBUG_FILE):
+                committed = (root / name).read_bytes()
+                rerun = (first / name).read_bytes()
+                if committed != rerun:
+                    mismatched = True
+                    check.fail(f"{name}: not reproducible by an offline/{retrieval} rerun; "
+                               f"{_first_difference(committed, rerun)}")
+            if not mismatched:
+                check.ok(f"rerun in offline/{retrieval} mode reproduces results.json and "
+                         "debug_report.json byte-for-byte")
             return
-        mismatched = False
+
         for name in (RESULTS_FILE, DEBUG_FILE):
-            committed = (root / name).read_bytes()
-            rerun = (Path(tmp) / name).read_bytes()
-            if committed != rerun:
-                mismatched = True
-                check.fail(f"{name}: not reproducible by a {mode}/{retrieval} rerun; "
-                           f"{_first_difference(committed, rerun)}")
-        if not mismatched:
-            check.ok(f"rerun in {mode}/{retrieval} mode reproduces results.json and debug_report.json byte-for-byte")
+            if (first / name).read_bytes() != (second / name).read_bytes():
+                check.fail(f"{name}: two offline reruns differ; the offline path is not deterministic")
+                return
+        committed = json.loads((root / RESULTS_FILE).read_text(encoding="utf-8"))
+        rerun = json.loads((first / RESULTS_FILE).read_text(encoding="utf-8"))
+        expected = {r["ticket_id"]: r["retrieved_articles"] for r in rerun}
+        actual = {r.get("ticket_id"): r.get("retrieved_articles") for r in committed if isinstance(r, dict)}
+        diffs = sorted(t for t in expected if actual.get(t) != expected[t])
+        if diffs:
+            check.fail("results.json: retrieved_articles differ from a fresh deterministic retrieval for "
+                       + ", ".join(f"{t} (committed {actual.get(t)}, rerun {expected[t]})" for t in diffs))
+            return
+        check.ok(f"{mode} artifacts: retrieval matches a fresh deterministic run for every ticket; "
+                 "offline path reproduces byte-for-byte (LLM wording is not byte-reproducible by design)")
 
 
 def _run_checks(root: Path) -> _Check:

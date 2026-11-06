@@ -6,6 +6,7 @@ import pytest
 from support_pipeline.data import load_articles, load_examples, load_tickets
 from support_pipeline.models import Article, Evidence, Intent, LabeledExample, Ticket
 from support_pipeline.retrieval import (
+    SNIPPET_LIMIT,
     CROSS_ENCODER_MODEL,
     ENCODER_MODEL,
     EmbeddingRetriever,
@@ -108,7 +109,7 @@ def test_retrieve_output_invariants(sample, tfidf):
             assert round(item.relevance, 3) == item.relevance
             assert item.lexical_score == item.relevance
             assert item.rerank_score is None
-            assert 0 < len(item.snippet) <= 240
+            assert 0 < len(item.snippet) <= SNIPPET_LIMIT
             if position > 0:
                 assert item.relevance >= 0.35
         keys = [(-e.relevance, e.article_id) for e in evidence]
@@ -125,7 +126,7 @@ def test_title_and_snippet_come_from_article(sample, tfidf):
             assert item.snippet in article.body
 
 
-def test_snippet_is_best_matching_sentence():
+def test_short_body_is_used_whole_as_snippet():
     article = Article(
         article_id="X",
         title="Help",
@@ -134,15 +135,15 @@ def test_snippet_is_best_matching_sentence():
     retriever = TfidfRetriever()
     retriever.index([article], [])
     [evidence] = retriever.retrieve(_ticket("how do I reset my password"))
-    assert evidence.snippet == "Reset the password from the login page."
+    assert evidence.snippet == article.body
 
 
 def test_snippet_truncated_on_word_boundary():
-    long_sentence = " ".join(["deposit"] * 60) + "."
+    long_sentence = " ".join(["deposit"] * 120) + "."
     retriever = TfidfRetriever()
     retriever.index([Article(article_id="L", title="Deposits", body=long_sentence)], [])
     [evidence] = retriever.retrieve(_ticket("deposit"))
-    assert len(evidence.snippet) <= 240
+    assert len(evidence.snippet) <= SNIPPET_LIMIT
     assert evidence.snippet.endswith("…")
     assert evidence.snippet[:-1].split(" ") == ["deposit"] * len(evidence.snippet[:-1].split(" "))
 

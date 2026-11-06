@@ -24,7 +24,7 @@ CROSS_ENCODER_MODEL = "cross-encoder/ms-marco-MiniLM-L6-v2"
 MAX_RESULTS = 3
 MAX_EXAMPLES = 3
 RELEVANCE_THRESHOLD = 0.35
-SNIPPET_LIMIT = 240
+SNIPPET_LIMIT = 480
 RERANK_DEPTH = 5
 
 
@@ -51,6 +51,12 @@ def truncate_snippet(text: str, limit: int = SNIPPET_LIMIT) -> str:
     if " " in cut:
         cut = cut.rsplit(" ", 1)[0]
     return cut.rstrip() + "…"
+
+
+def _article_snippet(body: str, best_sentence: str) -> str:
+    """Whole article body when it fits the limit (full context for drafting), else the best sentence."""
+    body = body.strip()
+    return body if len(body) <= SNIPPET_LIMIT else truncate_snippet(best_sentence)
 
 
 def select_evidence(candidates: list[Evidence]) -> list[Evidence]:
@@ -191,7 +197,7 @@ class TfidfRetriever:
                 Evidence(
                     article_id=article.article_id,
                     title=article.title,
-                    snippet=truncate_snippet(snippet),
+                    snippet=_article_snippet(article.body, snippet),
                     lexical_score=relevance,
                     rerank_score=None,
                     relevance=relevance,
@@ -344,7 +350,7 @@ class EmbeddingRetriever:
                 Evidence(
                     article_id=article.article_id,
                     title=article.title,
-                    snippet=truncate_snippet(snippet),
+                    snippet=_article_snippet(article.body, snippet),
                     lexical_score=round(dense[i], 3),
                     rerank_score=round(logit, 3),
                     relevance=round(_sigmoid(logit), 3),

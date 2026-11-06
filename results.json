@@ -5,9 +5,9 @@
     "retrieved_articles": [
       "A1"
     ],
-    "reply_draft": "Thanks for reaching out about your deposit. Here is some general guidance that may help. Based on our help article \"Card deposit processing times\": Card deposits are usually instant, but may be delayed by issuer checks, network issues, or pending review. If this doesn't resolve it, a support agent can review your case.",
+    "reply_draft": "Please confirm that your bank card payment was completed successfully and check your transaction history for the deposit and its status. Card deposits are usually instant, but they can be delayed by issuer checks, network issues, or a pending review. Please allow the documented processing window to elapse; if the deposit is still not reflected after that, contact support so the issue can be escalated.",
     "grounded": true,
-    "confidence": 0.544,
+    "confidence": 0.738,
     "needs_human_escalation": false,
     "safety_flags": []
   },
@@ -17,9 +17,9 @@
     "retrieved_articles": [
       "A2"
     ],
-    "reply_draft": "Thanks for contacting us about resetting your password. Here are some general steps to try. Based on our help article \"Password reset troubleshooting\": If the client does not receive a reset email, confirm the registered email address, check spam folders, wait a few minutes, and retry. If this doesn't resolve it, a support agent can review your case.",
+    "reply_draft": "Please confirm that you’re checking the inbox for the email address registered to your account, and check your spam/junk folders. Wait a few minutes, then retry the password reset. Avoid repeated attempts in quick succession, as they may trigger a temporary rate limit. If the reset email still does not arrive, please reply to this ticket so the issue can be escalated to a support agent. We’ll need to verify your identity before helping with account access; please do not share your password or other sensitive credentials.",
     "grounded": true,
-    "confidence": 0.802,
+    "confidence": 0.792,
     "needs_human_escalation": false,
     "safety_flags": []
   },
@@ -29,12 +29,14 @@
     "retrieved_articles": [
       "A3"
     ],
-    "reply_draft": "Thanks for reaching out about your withdrawal. Here is some general information. Based on our help article \"Withdrawal review and declines\": Withdrawals may be declined due to incomplete verification, mismatched payment method details, compliance review, or account restrictions. A support agent can review your account status if you need more help.",
-    "grounded": true,
-    "confidence": 0.801,
+    "reply_draft": "I’m sorry your withdrawal was declined. Withdrawals can generally be declined due to incomplete verification, mismatched payment method details, compliance review, or account restrictions. However, the available information does not confirm which reason applies to your withdrawal or its current status, and I can’t infer those account-specific details. A support agent will follow up to review the withdrawal status and decline reason in line with compliance and verification procedures.",
+    "grounded": false,
+    "confidence": 0.426,
     "needs_human_escalation": true,
     "safety_flags": [
-      "policy_sensitive"
+      "insufficient_grounding",
+      "policy_sensitive",
+      "low_confidence"
     ]
   },
   {
@@ -43,9 +45,9 @@
     "retrieved_articles": [
       "A5"
     ],
-    "reply_draft": "I'm sorry, but we can't provide market predictions, trading recommendations, or profit guarantees. We're happy to help with questions about your account or our services. Based on our help article \"No investment or trading advice\": Support agents must not provide market predictions, profit guarantees, or asset recommendations. If you have another question, a support agent can review your case.",
+    "reply_draft": "I’m sorry, but I can’t predict which asset will go up today, recommend a specific asset to trade, or guarantee that you’ll make a profit.",
     "grounded": false,
-    "confidence": 0.316,
+    "confidence": 0.305,
     "needs_human_escalation": true,
     "safety_flags": [
       "advice_request",
@@ -59,9 +61,9 @@
     "retrieved_articles": [
       "A4"
     ],
-    "reply_draft": "Thanks for letting us know you're having trouble accessing your account. Here is some general guidance. Based on our help article \"Account lock after failed sign-in attempts\": For security reasons, repeated failed sign-in attempts can temporarily lock the account. If this doesn't resolve it, a support agent can review your case through a secure channel.",
+    "reply_draft": "Repeated failed sign-in attempts can temporarily lock an account for security reasons. Please wait for the cooldown period before trying again, or use the platform’s secure recovery flow. Complete any identity verification through that secure flow, and do not share your password or other sensitive credentials in this chat or other unsecured channels.",
     "grounded": true,
-    "confidence": 0.881,
+    "confidence": 0.871,
     "needs_human_escalation": true,
     "safety_flags": [
       "policy_sensitive"

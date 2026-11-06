@@ -66,6 +66,20 @@ def _parse_object(raw: str) -> dict[str, Any]:
     return data
 
 
+RETRIES = 1  # one retry for transient provider errors (timeouts, empty or truncated replies)
+
+
+def _call_with_retry(transport: Any, model: str, messages: list[dict[str, str]],
+                     schema: dict[str, Any], max_tokens: int) -> str:
+    for attempt in range(RETRIES + 1):
+        try:
+            return transport.chat_json(model, messages, schema, max_tokens, 0)
+        except Exception:  # noqa: BLE001 - re-raised after the last attempt
+            if attempt == RETRIES:
+                raise
+    raise AssertionError("unreachable")
+
+
 def _validation_summary(exc: ValidationError) -> str:
     fields = sorted({".".join(str(p) for p in err["loc"]) or "<root>" for err in exc.errors()})
     return "invalid output: " + ", ".join(fields)
@@ -104,7 +118,7 @@ KIMI_SYSTEM_PROMPT = (
 class DeepSeekClassifier:
     name = "deepseek"
     MODEL = "deepseek-ai/DeepSeek-V4.1-Flash-1017"
-    MAX_TOKENS = 300
+    MAX_TOKENS = 1000  # reasoning model: leave room for reasoning tokens before the JSON
     MAX_EXAMPLES = 3
 
     def __init__(self, transport: Transport, fallback: Classifier | None = None) -> None:
@@ -134,8 +148,8 @@ class DeepSeekClassifier:
         if not ticket.message.strip():
             return self._fallback("empty ticket message", ticket, similar)
         try:
-            raw = self.transport.chat_json(
-                self.MODEL, self.messages(ticket, similar), self.schema, self.MAX_TOKENS, 0
+            raw = _call_with_retry(
+                self.transport, self.MODEL, self.messages(ticket, similar), self.schema, self.MAX_TOKENS
             )
         except Exception as exc:  # noqa: BLE001
             return self._fallback(f"provider error ({type(exc).__name__})", ticket, similar)
@@ -157,7 +171,7 @@ class DeepSeekClassifier:
 class KimiGenerator:
     name = "kimi"
     MODEL = "moonshotai/Kimi-K3.1-Pro"
-    MAX_TOKENS = 600
+    MAX_TOKENS = 2000  # reasoning model: ~450 reasoning tokens observed on a sample draft
 
     def __init__(self, transport: Transport, fallback: Generator | None = None) -> None:
         self.transport = transport
@@ -194,7 +208,7 @@ class KimiGenerator:
         self.last_dropped_citations = []
         args = (ticket, classification, evidence)
         try:
-            raw = self.transport.chat_json(self.MODEL, self.messages(*args), self.schema, self.MAX_TOKENS, 0)
+            raw = _call_with_retry(self.transport, self.MODEL, self.messages(*args), self.schema, self.MAX_TOKENS)
         except Exception as exc:  # noqa: BLE001
             return self._fallback(f"provider error ({type(exc).__name__})", *args)
         try:

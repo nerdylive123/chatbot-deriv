@@ -6,8 +6,9 @@
     python scripts/try_ticket.py --file my_tickets.json          # your own ticket file
     python scripts/try_ticket.py --json "..."                    # machine-readable output
 
-Uses the supplied kb_articles.json and examples.json. Offline by default (no key,
-no downloads); pass --mode together to use DeepSeek/Kimi if TOGETHER_API_KEY is set.
+Uses the supplied kb_articles.json and examples.json. By default (--mode auto)
+DeepSeek classifies and Kimi writes the reply whenever TOGETHER_API_KEY is set in
+the shell or .env; without a key it uses the offline fallback (--mode offline forces it).
 Never writes results.json or debug_report.json.
 """
 
@@ -21,6 +22,7 @@ from pathlib import Path
 REPO_ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(REPO_ROOT))
 
+from support_pipeline.env import load_dotenv  # noqa: E402
 from support_pipeline.data import DataError, load_articles, load_examples, load_tickets  # noqa: E402
 from support_pipeline.models import Ticket, TicketRun  # noqa: E402
 from support_pipeline.pipeline import MODES, ConfigError, build_pipeline  # noqa: E402
@@ -57,10 +59,11 @@ def main(argv: list[str] | None = None) -> int:
     source = parser.add_mutually_exclusive_group()
     source.add_argument("--samples", action="store_true", help="run the supplied tickets.json")
     source.add_argument("--file", type=Path, help="run a tickets JSON file (same schema as tickets.json)")
-    parser.add_argument("--mode", choices=MODES, default="offline")
+    parser.add_argument("--mode", choices=MODES, default="auto")
     parser.add_argument("--retrieval", choices=("tfidf", "embedding"), default="tfidf")
     parser.add_argument("--json", action="store_true", help="print JSON instead of a readable summary")
     args = parser.parse_args(argv)
+    load_dotenv()
 
     try:
         pipeline, _backends, notes = build_pipeline(args.mode, args.retrieval)

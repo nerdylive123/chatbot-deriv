@@ -14,6 +14,8 @@ from support_pipeline.models import (
 )
 from support_pipeline import policy
 from support_pipeline.policy import (
+    has_refusal,
+    has_unsafe_content,
     LOW_CONFIDENCE,
     PENALTY_CONFLICT,
     PENALTY_INSUFFICIENT,
@@ -425,3 +427,18 @@ def test_determinism():
     )
     assert run(**kwargs) == run(**kwargs)
     assert run(**kwargs).model_dump() == run(**kwargs).model_dump()
+
+
+def test_llm_refusal_with_refusal_verbs_is_kept():
+    # Real Kimi output on the sample trading-advice ticket: a safe refusal that
+    # names what it won't do ("predict which asset will go up").
+    refusal = ("I’m sorry, but I can’t predict which asset will go up today, recommend an asset to "
+               "trade, or guarantee profits. For guidance tailored to your financial circumstances, "
+               "please consider consulting a licensed financial advisor.")
+    assert has_refusal(refusal)
+    assert not has_unsafe_content(refusal, [])
+
+
+def test_contrast_after_refusal_verb_is_still_flagged():
+    sneaky = "I can't predict prices, but gold will go up today."
+    assert has_unsafe_content(sneaky, [])

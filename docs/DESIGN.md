@@ -4,14 +4,21 @@
 
 The pipeline runs seven explicit stages: `LOAD_DATA -> INDEX_KB -> CLASSIFY_INTENT -> RETRIEVE_CONTEXT -> GENERATE_REPLY -> VALIDATE_OUTPUT -> WRITE_RESULTS`. Each stage sits behind a small interface (`Retriever`, `Classifier`, `Generator`), so retrieval, classification, and generation can be swapped independently.
 
-**Default: offline mode.** It needs no API key, model download, or torch. `pip install -r requirements.txt` (Pydantic, pytest) is enough.
-- Retrieval: pure-Python, passage-level TF-IDF (smoothed IDF, sublinear TF, cosine). Each KB article is split into title and title+sentence passages; the article score is its best passage, and that passage becomes the snippet.
-- Classification: a similarity-weighted vote over the 3 nearest labeled examples in `examples.json`, using the same TF-IDF method. No keyword rules.
-- Generation: per-intent safe framing composed with the retrieved snippets.
+**Retrieval is always local:** pure-Python, passage-level TF-IDF (smoothed IDF, sublinear TF, cosine). Each KB article is split into title and title+sentence passages, and the article score is its best passage. The evidence passed to the drafter is the whole article when it fits in 480 characters, otherwise the best passage.
 
-**Optional backends**, selected explicitly:
-- `--retrieval embedding`: `sentence-transformers/all-MiniLM-L6-v2` dense search, then `cross-encoder/ms-marco-MiniLM-L6-v2` reranks the top `min(5, corpus size)` candidates. Used only when installed (`requirements-local-models.txt`) and already cached; otherwise the pipeline falls back to TF-IDF and records why.
-- `--mode together`: `deepseek-ai/DeepSeek-V4.1-Flash-1017` classifies and `moonshotai/Kimi-K3.1-Pro` drafts, through `TOGETHER_API_KEY`. Every response is validated with Pydantic, and any failure falls back to the offline component.
+**Default mode `auto`: the LLMs do the language work** whenever `TOGETHER_API_KEY` is available, from the shell or a git-ignored `.env`.
+- `deepseek-ai/DeepSeek-V4.1-Flash-1017` classifies.
+- `moonshotai/Kimi-K3.1-Pro` writes every reply from the selected articles.
+- Calls go to Together's REST API over the standard library, so no SDK is needed.
+- Every response is validated with Pydantic, and each call gets one retry.
+- Both are reasoning models, so they get token budgets for reasoning before the JSON answer: 1000 for DeepSeek, 2000 for Kimi.
+
+**Offline fallback**, used without a key, on a failed call, or with `--mode offline`:
+- Classification is a similarity-weighted vote over the 3 nearest labeled examples in `examples.json`. No keyword rules.
+- Drafting is a per-intent safe framing composed with the retrieved article text.
+- It needs no API key, model download, or torch.
+
+**Optional retrieval backend** (`--retrieval embedding`): `sentence-transformers/all-MiniLM-L6-v2` dense search, then `cross-encoder/ms-marco-MiniLM-L6-v2` reranks the top `min(5, corpus size)` candidates. It's used only when installed (`requirements-local-models.txt`) and already cached; otherwise the pipeline falls back to TF-IDF and records why.
 
 ## Responsibility split
 
@@ -45,7 +52,12 @@ Output safety checks scan the draft for market predictions, profit guarantees, a
 
 ## Reproducibility
 
-The committed `results.json` and `debug_report.json` are generated in offline TF-IDF mode, which uses only the standard library and deterministic ordering, so an evaluator's rerun matches byte-for-byte on any machine. All floats are rounded to 3 decimals before serialization, and traces exclude timings. `validate.py` reads the recorded mode from `debug_report.json`, reruns in that mode, and byte-compares. If the recorded mode needs a key that's missing, it fails with a clear message. The optional embedding backend is reproducible only on the same machine and library versions. Together mode isn't guaranteed reproducible.
+The committed `results.json` and `debug_report.json` are generated with DeepSeek and Kimi (`"mode": "together"`). LLM wording isn't byte-reproducible, even at temperature 0, so reproducibility is checked on the deterministic parts. `validate.py` never calls an API and needs no key:
+- Retrieval is local and identical in every mode, so each ticket's `retrieved_articles` must equal a fresh offline rerun.
+- The offline path is run twice and must be byte-identical.
+- LLM text is checked by schema and the deterministic safety policy.
+
+Artifacts generated offline are byte-compared against a rerun in full. All floats are rounded to 3 decimals before serialization, JSON uses LF line endings, and traces exclude timings. The optional embedding backend is reproducible only on the same machine and library versions.
 
 ## Delivery and testing
 
@@ -63,7 +75,7 @@ Run: `python main.py`. Validate: `python validate.py`. Test: `python -m pytest`.
 
 | Brief item | Design element | Proof |
 |---|---|---|
-| MUST 1 pipeline, clean checkout | 7 named stages; offline default | `test_pipeline` stage order; clean-env run |
+| MUST 1 pipeline, clean checkout | 7 named stages; `auto` default runs with or without a key | `test_pipeline` stage order; clean-env run |
 | MUST 2 classification | 6-label enum; example-vote classifier / schema-bound DeepSeek | `test_fallback` (5/5 samples), `test_agents` |
 | MUST 3 retrieval | Passage TF-IDF, top 1–3, ID tie-break, separate stage | `test_retrieval`; `validate.py` ID check |
 | MUST 4 grounded reply | Evidence-only generator input, cited IDs, refusal framing | `test_fallback`, `test_agents`, `test_policy` |
@@ -73,7 +85,7 @@ Run: `python main.py`. Validate: `python validate.py`. Test: `python -m pytest`.
 | SHOULD 8 safety flags | Seven fixed-order flags | `test_policy` (one test per flag) |
 | SHOULD 9 explainability | Flat `debug_report.json` entries | `test_pipeline` debug-shape test |
 | STRETCH 10 swappable | `Retriever` / `Classifier` / `Generator` protocols | Fake-injection tests |
-| STRETCH 11 offline fallback | Default path needs no LLM or key | Acceptance tests run without a key |
+| STRETCH 11 offline fallback | No key or failed call → similarity classifier + template drafts | Acceptance tests run without a key |
 | Required artifacts | Committed inputs, outputs, README, `validate.py`, tests | `validate.py` file-existence check |
 | Validation checks | Files, JSON, one result each, schema, T4, IDs, reproducibility | `validate.py`, `test_validate.py` |
 | Technical constraints | Local files only; no ID logic; no hardcoded answers; no trading recs | Renamed-ID, lazy-import, and policy tests |
@@ -84,11 +96,12 @@ Run: `python main.py`. Validate: `python validate.py`. Test: `python -m pytest`.
 - Scores are not calibrated probabilities. The 0.35 and 0.45 thresholds are conservative and hand-set. T4's best lexical score (~0.33 in a prototype) falls just under 0.35, so it is refused and also escalated for insufficient grounding.
 - The labeled example set is small (22), so classification of paraphrases far from the examples is weak. Edge tests show wrong labels on out-of-domain, non-English, and injected text (for example "What are your office hours?" → `deposit_issue`). Every such case gets low confidence or a policy flag and escalates, so the safety outcome holds even when the label doesn't.
 - Output safety checks are phrase-based and conservative, so they may over-escalate. For example, any run of 5+ digits in a ticket (a phone number, say) counts as an account-specific request.
-- Offline drafts are composed from per-intent framings plus retrieved snippets, not hardcoded per ticket. They read as templated.
+- Offline fallback drafts are composed from per-intent framings plus retrieved article text, not hardcoded per ticket. They read as templated; with a key, Kimi writes the reply instead.
+- LLM replies vary between runs, so only retrieval and the offline path are byte-reproducible.
 
 ## Sources
 
-Model IDs and structured-output support come from Together's documentation. Real calls are verified only by the opt-in smoke test.
+Model IDs and structured-output support come from Together's documentation. The opt-in smoke test (`scripts/smoke_together.py`) confirmed both IDs live, with validated JSON from each, on 2026-11-06.
 
 - https://docs.together.ai/docs/serverless/models
 - https://docs.together.ai/docs/changelog

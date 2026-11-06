@@ -222,17 +222,14 @@ def test_changed_debug_report_fails_reproducibility(root):
     assert any("debug_report.json" in e and "reproduc" in e for e in errors)
 
 
-def test_together_mode_without_key(root, monkeypatch):
+def test_together_mode_validates_without_key(root, monkeypatch):
+    # LLM-generated artifacts must stay checkable by an evaluator who has no key.
     monkeypatch.delenv(ENV_VAR, raising=False)
     path = root / "debug_report.json"
     report = json.loads(path.read_text(encoding="utf-8"))
     report["mode"] = "together"
     path.write_text(json.dumps(report, indent=2), encoding="utf-8")
-    errors = validate.validate(root)
-    assert (
-        "results.json was generated in together mode; rerun `python main.py` (offline) "
-        "or provide TOGETHER_API_KEY"
-    ) in errors
+    assert validate.validate(root) == []
 
 
 def test_embedding_backend_unavailable(root, monkeypatch):

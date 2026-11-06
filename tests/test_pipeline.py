@@ -298,11 +298,17 @@ def test_debug_report_top_level_backends_are_configured(monkeypatch, sample_data
 # ------------------------------------------------------------------ build_pipeline
 
 
-def test_build_pipeline_offline_default():
+def test_build_pipeline_auto_default_falls_back_offline_without_key():
     pipe, backends, notes = build_pipeline()
     assert pipe.mode == "offline"
     assert backends.model_dump() == {"retrieval": "tfidf", "classifier": "similarity_fallback",
                                      "generator": "template_fallback"}
+    assert len(notes) == 1 and "TOGETHER_API_KEY" in notes[0]
+
+
+def test_build_pipeline_explicit_offline_has_no_notes():
+    pipe, _, notes = build_pipeline("offline")
+    assert pipe.mode == "offline"
     assert notes == []
 
 

@@ -1,16 +1,21 @@
-"""Thin wrapper around the optional Together SDK.
+"""Thin client for Together's OpenAI-compatible chat completions API.
 
-`together` is imported lazily, only when a request is made. The API key is held
-privately and never appears in repr, exception text, or exception chains.
+Uses only the standard library (urllib), so hosted mode needs no extra install.
+The API key is held privately and never appears in repr, exception text, or
+exception chains.
 """
 
 from __future__ import annotations
 
+import json
 import os
+import urllib.request
+from types import SimpleNamespace
 from typing import Any, Callable
 
 ENV_VAR = "TOGETHER_API_KEY"
-DEFAULT_TIMEOUT = 30.0
+DEFAULT_TIMEOUT = 60.0
+API_URL = "https://api.together.xyz/v1/chat/completions"
 
 
 class TransportError(RuntimeError):
@@ -21,12 +26,33 @@ def has_together_key() -> bool:
     return bool(os.environ.get(ENV_VAR, "").strip())
 
 
+class _HttpCompletions:
+    def __init__(self, api_key: str, timeout: float) -> None:
+        self._api_key = api_key
+        self._timeout = timeout
+
+    def create(self, **payload: Any) -> Any:
+        request = urllib.request.Request(
+            API_URL,
+            data=json.dumps(payload).encode("utf-8"),
+            headers={
+                "Authorization": f"Bearer {self._api_key}",
+                "Content-Type": "application/json",
+                "User-Agent": "support-ticket-pipeline",
+            },
+            method="POST",
+        )
+        with urllib.request.urlopen(request, timeout=self._timeout) as response:  # noqa: S310 - fixed https URL
+            body = json.load(response)
+        content = body["choices"][0]["message"]["content"]
+        return SimpleNamespace(choices=[SimpleNamespace(message=SimpleNamespace(content=content))])
+
+    def __repr__(self) -> str:
+        return "_HttpCompletions(api_key=<redacted>)"
+
+
 def _default_client_factory(api_key: str, timeout: float) -> Any:
-    try:
-        import together  # noqa: PLC0415 - optional dependency, imported lazily
-    except ImportError:
-        raise TransportError("together SDK is not installed (pip install -r requirements-together.txt)") from None
-    return together.Together(api_key=api_key, timeout=timeout)
+    return SimpleNamespace(chat=SimpleNamespace(completions=_HttpCompletions(api_key, timeout)))
 
 
 class TogetherTransport:
@@ -83,4 +109,4 @@ class TogetherTransport:
         return content
 
 
-__all__ = ["ENV_VAR", "DEFAULT_TIMEOUT", "TransportError", "TogetherTransport", "has_together_key"]
+__all__ = ["API_URL", "ENV_VAR", "DEFAULT_TIMEOUT", "TransportError", "TogetherTransport", "has_together_key"]

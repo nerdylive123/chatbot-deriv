@@ -2,7 +2,7 @@
 
     python scripts/smoke_together.py
 
-Needs TOGETHER_API_KEY and `pip install -r requirements-together.txt`. Without
+Needs TOGETHER_API_KEY (shell or .env); no extra packages. Without
 the key it prints "SKIPPED: TOGETHER_API_KEY not set" and exits 0. It makes at
 most two bounded requests and never prints the key. Not run by pytest.
 """
@@ -15,10 +15,12 @@ from pathlib import Path
 REPO_ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(REPO_ROOT))
 
+from support_pipeline.env import load_dotenv  # noqa: E402
 from support_pipeline.together_client import ENV_VAR, has_together_key  # noqa: E402
 
 
 def main() -> int:
+    load_dotenv()
     if not has_together_key():
         print(f"SKIPPED: {ENV_VAR} not set")
         return 0

@@ -12,6 +12,7 @@ from pathlib import Path
 import pytest
 
 import main as cli
+import validate
 from support_pipeline.data import load_articles, load_tickets
 from support_pipeline.models import REQUIRED_RESULT_KEYS, SAFETY_FLAGS, Intent, TicketResult
 
@@ -98,14 +99,19 @@ def test_exactly_one_result_per_ticket(results):
     assert len(set(result_ids)) == len(result_ids)
 
 
-@pytest.mark.parametrize("name", ["results.json", "debug_report.json"])
-def test_committed_artifacts_match_fresh_offline_run(out_dir, name):
-    assert (REPO_ROOT / name).read_bytes() == (out_dir / name).read_bytes()
+def test_committed_artifacts_pass_validation():
+    # Offline artifacts are byte-compared; LLM artifacts are checked for exact retrieval + safety.
+    assert validate.validate(REPO_ROOT) == []
+
+
+def test_committed_retrieval_matches_fresh_offline_run(results, out_dir):
+    fresh = json.loads((out_dir / "results.json").read_text(encoding="utf-8"))
+    assert [r["retrieved_articles"] for r in results] == [r["retrieved_articles"] for r in fresh]
 
 
 def test_offline_run_from_copied_inputs_matches(tmp_path, out_dir):
     for name in ("tickets.json", "kb_articles.json", "examples.json"):
         shutil.copyfile(REPO_ROOT / name, tmp_path / name)
-    assert cli.main(["--data-dir", str(tmp_path), "--out", str(tmp_path)]) == 0
+    assert cli.main(["--mode", "offline", "--data-dir", str(tmp_path), "--out", str(tmp_path)]) == 0
     for name in ("results.json", "debug_report.json"):
         assert (tmp_path / name).read_bytes() == (out_dir / name).read_bytes()

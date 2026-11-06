@@ -35,7 +35,7 @@ from .retrieval import Retriever, make_retriever
 from .serialize import DEBUG_FILE, RESULTS_FILE
 from .together_client import ENV_VAR, TogetherTransport, has_together_key
 
-MODES = ("offline", "together")
+MODES = ("auto", "offline", "together")
 REMOTE_BACKENDS = frozenset({"deepseek", "kimi"})
 
 
@@ -291,7 +291,7 @@ class Pipeline:
 
 
 def build_pipeline(
-    mode: str = "offline",
+    mode: str = "auto",
     retrieval: str = "tfidf",
     transport: Transport | None = None,
 ) -> tuple[Pipeline, Backends, list[str]]:
@@ -310,6 +310,12 @@ def build_pipeline(
 
     classifier: Classifier
     generator: Generator
+    if mode == "auto":
+        if has_together_key():
+            mode = "together"
+        else:
+            mode = "offline"
+            notes.append(f"{ENV_VAR} not found (shell or .env); using the offline fallback")
     if mode == "offline":
         classifier, generator = SimilarityClassifier(), TemplateGenerator()
     else:

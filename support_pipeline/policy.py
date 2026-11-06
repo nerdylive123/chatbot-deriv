@@ -93,7 +93,7 @@ _REFUSAL_TOPIC = re.compile(r"(advice|recommend|predict|guarantee)", _I)
 # A sentence counts as a refusal sentence when it contains a refusal marker and
 # no contrast ("but", "however", ...) after that marker.
 _REFUSAL_MARKER = re.compile(
-    r"\b(can(no|')t|can not|unable to|won't|not able to)\s+(provide|give|offer|share|make)\b", _I
+    r"\b(can(no|')t|can not|unable to|won't|not able to)\s+(provide|give|offer|share|make|predict|forecast|recommend|suggest|advise|guarantee|tell)\b", _I
 )
 _CONTRAST = re.compile(r"\b(but|however|though|although|still)\b", _I)
 _SENTENCE_SPLIT = re.compile(r"(?<=[.!?])\s+")
