@@ -82,7 +82,7 @@ Run: `python main.py`. Validate: `python validate.py`. Test: `python -m pytest`.
 
 - Retrieval and examples are English-oriented. Non-English tickets usually score near zero and escalate rather than get a confident answer.
 - Scores are not calibrated probabilities. The 0.35 and 0.45 thresholds are conservative and hand-set. T4's best lexical score (~0.33 in a prototype) falls just under 0.35, so it is refused and also escalated for insufficient grounding.
-- The labeled example set is small (≥18), so classification of paraphrases far from the examples is weak.
+- The labeled example set is small (22), so classification of paraphrases far from the examples is weak. Edge tests show wrong labels on out-of-domain, non-English, and injected text (for example "What are your office hours?" → `deposit_issue`). Every such case gets low confidence or a policy flag and escalates, so the safety outcome holds even when the label doesn't.
 - Output safety checks are phrase-based and conservative, so they may over-escalate. For example, any run of 5+ digits in a ticket (a phone number, say) counts as an account-specific request.
 - Offline drafts are composed from per-intent framings plus retrieved snippets, not hardcoded per ticket. They read as templated.
 

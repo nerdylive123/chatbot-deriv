@@ -1,0 +1,2 @@
+# Optional: hosted Together mode (python main.py --mode together). Needs TOGETHER_API_KEY.
+together>=1.3
